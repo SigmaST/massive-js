@@ -12,6 +12,10 @@ ORMs abstract this away, and it's silly. Postgres is an amazing database with a 
 
 Massive embraces SQL completely, and helps you out when you don't feel like writing another mundane `select * from` statement.
 
+## Documentation
+Full documentation is available [here](http://massive-js.readthedocs.org/en/latest/).
+
+
 ## Installation
 
 ```
@@ -175,6 +179,39 @@ db.my_documents.findDoc({id : [1,3,9]}, function(err,docs){
 db.my_documents.findDoc({"id <>": [3,5]}, function(err,docs){
   //documents without ID 3 and 5
 });
+
+// Create an empty schema
+db.createSchema('my_schema', function(err, res) {
+  // empty array
+});
+
+// Drop schema
+db.dropSchema('my_schema', {cascade: true|false}, function(err, res) {
+  // empty array
+});
+
+// Create a new table
+db.createDocumentTable('my_table', function(err, res) {
+  // empty array
+});
+
+// Create a new table on explicit schema
+db.createDocumentTable('my_schema.my_table', function(err, res) {
+  // empty array
+});
+
+// Drop table
+db.dropTable('my_table', {cascade: true|false}, function(err, res) {
+  // empty array
+});
+
+// Drop table on explicit schema
+db.dropTable('my_schema.my_table', {cascade: true|false}, function(err, res) {
+  // empty array
+});
+
+
+
 ```
 
 #### A Word About IDs in Document Tables
