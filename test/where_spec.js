@@ -18,77 +18,39 @@ describe('WHERE clause generation', function () {
       });
     });
 
-    describe('JSON fields', function () {
-      it('should format a JSON field without any quotes', function () {
-        var result = where.parseKey('json->>key');
-        assert.equal(result.field, 'json');
-        assert.equal(result.quotedField, '"json"->>\'key\'');
-      });
-
-      it('should format a JSON field with a quoted field', function () {
-        var result = where.parseKey('"json field"->>key');
-        assert.equal(result.field, 'json field');
-        assert.equal(result.quotedField, '"json field"->>\'key\'');
-      });
-
-      it('should format a JSON field with a quoted key', function () {
-        var result = where.parseKey('json->>\'key\'');
-        assert.equal(result.field, 'json');
-        assert.equal(result.quotedField, '"json"->>\'key\'');
-      });
-
-      it('should format a JSON field with quotes all over', function () {
-        var result = where.parseKey('"json field"->>\'key\'');
-        assert.equal(result.field, 'json field');
-        assert.equal(result.quotedField, '"json field"->>\'key\'');
-      });
-
-      it('should format a JSON field with whitespace and no quotes', function () {
-        var result = where.parseKey('json ->> key');
-        assert.equal(result.field, 'json');
-        assert.equal(result.quotedField, '"json"->>\'key\'');
-      });
-
-      it('should format a JSON field with whitespace and quotes', function () {
-        var result = where.parseKey('"json field" ->> \'key\'');
-        assert.equal(result.field, 'json field');
-        assert.equal(result.quotedField, '"json field"->>\'key\'');
-      });
-    });
-
-    describe('JSON objects', function () {
-      it('should format a JSON object without any quotes', function () {
+    describe('JSON traversal', function () {
+      it('should format a JSON path without any quotes', function () {
         var result = where.parseKey('json#>>{outer,inner}');
         assert.equal(result.field, 'json');
         assert.equal(result.quotedField, '"json"#>>\'{outer,inner}\'');
       });
 
-      it('should format a JSON object with a quoted field', function () {
+      it('should format a JSON path with a quoted field', function () {
         var result = where.parseKey('"json field"#>>{outer,inner}');
         assert.equal(result.field, 'json field');
         assert.equal(result.quotedField, '"json field"#>>\'{outer,inner}\'');
       });
 
-      it('should format a JSON object with a quoted {outer, inner}', function () {
+      it('should format a JSON path with a quoted {outer,inner}', function () {
         var result = where.parseKey('json#>>\'{outer,inner}\'');
         assert.equal(result.field, 'json');
         assert.equal(result.quotedField, '"json"#>>\'{outer,inner}\'');
       });
 
-      it('should format a JSON object with quotes all over', function () {
+      it('should format a JSON path with quotes all over', function () {
         var result = where.parseKey('"json field"#>>\'{outer,inner}\'');
         assert.equal(result.field, 'json field');
         assert.equal(result.quotedField, '"json field"#>>\'{outer,inner}\'');
       });
 
-      it('should format a JSON object with whitespace and no quotes', function () {
-        var result = where.parseKey('json #>> {outer, inner}');
+      it('should format a JSON path with whitespace and no quotes', function () {
+        var result = where.parseKey('json #>> {outer,inner}');
         assert.equal(result.field, 'json');
         assert.equal(result.quotedField, '"json"#>>\'{outer,inner}\'');
       });
 
-      it('should format a JSON object with whitespace and quotes', function () {
-        var result = where.parseKey('"json field" #>> \'{outer, inner}\'');
+      it('should format a JSON path with whitespace and quotes', function () {
+        var result = where.parseKey('"json field" #>> \'{outer,inner}\'');
         assert.equal(result.field, 'json field');
         assert.equal(result.quotedField, '"json field"#>>\'{outer,inner}\'');
       });
@@ -120,7 +82,7 @@ describe('WHERE clause generation', function () {
       });
 
       it('should allow any amount of whitespace', function () {
-        var result = where.parseKey('myfield    \t  \t <=');
+        var result = where.parseKey(' \r\n \t myfield  \r\n  \t  \t <= \r\n\t');
         assert.equal(result.field, 'myfield');
         assert.equal(result.quotedField, '"myfield"');
         assert.equal(result.operator, '<=');
@@ -167,10 +129,50 @@ describe('WHERE clause generation', function () {
         assert.equal(result.operator, '<=');
         assert.equal(result.mutator, undefined);
       });
+
+      it('should match the longest possible operator', function () {
+        var result = where.parseKey('field ~~*'); // ~ and ~* are also operators
+        assert.equal(result.field, 'field');
+        assert.equal(result.quotedField, '"field"');
+        assert.equal(result.operator, 'ILIKE');
+        assert.equal(result.mutator, undefined);
+      });
+
+      it('should ignore the case of LIKE and similar operators', function () {
+        var result = where.parseKey('field LikE');
+        assert.equal(result.field, 'field');
+        assert.equal(result.quotedField, '"field"');
+        assert.equal(result.operator, 'LIKE');
+        assert.equal(result.mutator, undefined);
+      });
+    });
+
+    describe('casting', function () {
+      it('should cast fields', function () {
+        var result = where.parseKey('field::text LIKE');
+        assert.equal(result.field, 'field::text');
+        assert.equal(result.quotedField, '"field"::text');
+        assert.equal(result.operator, 'LIKE');
+        assert.equal(result.mutator, undefined);
+      });
+
+      it('should cast quoted fields', function () {
+        var result = where.parseKey('"field"::text LIKE');
+        assert.equal(result.field, 'field::text');
+        assert.equal(result.quotedField, '"field"::text');
+        assert.equal(result.operator, 'LIKE');
+        assert.equal(result.mutator, undefined);
+      });
     });
   });
 
   describe('forTable', function () {
+    it('should create an empty WHERE clause', function () {
+      var result = where.forTable({});
+      assert.equal(result.where, ' \nWHERE TRUE');
+      assert.equal(result.params.length, 0);
+    });
+
     it('should create a basic WHERE clause', function () {
       var result = where.forTable({field: 'value'});
       assert.equal(result.where, ' \nWHERE "field" = $1');

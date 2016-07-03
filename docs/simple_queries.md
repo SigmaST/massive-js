@@ -58,27 +58,53 @@ db.users.find({active: true}, function(err, users){
 });
 ```
 
-### More Complex Operations
+### Conditions
+Most of the common ANSI and Postgres-specific boolean operators are supported,
+in as close to actual Postgres syntax as possible. Certain alternative forms can
+also be used: for instance, while the standard syntax for inequality is `<>`,
+Massive will also recognize and convert `!` and `!=`.
 
-```js
-// an IN query
-db.products.find({id : [10, 21]}, function(err, products){
-  // products 10 and 21
-});
+Where applicable, operators are case-insensitive: `like` and `LIKE` are equally
+valid.
 
-// a NOT IN query
-db.products.find({"id <>": [10, 21]}, function(err, products){
-  // products other than 10 and 21
-});
+#### Comparison
+* `=` (equality): `{price: 20}`, `{"price =": 20}`
+* `<>` (inequality): `{"price <>": 20}`, `{"price !=": 20}`, `{"price !": 20}`
+* `<` (less than): `{"price <": 20}`
+* `>` (greater than): `{"price >": 20}`
+* `<=` (less than or equal): `{"price <=": 20}`
+* `>=` (greater than or equal): `{"price >=": 20}`
 
-db.products.find({"id < " : 2}, function(err, res){
-  // all products having id less than 2
-});
+#### Null values
+* `IS NULL`: `{description: null}`, `{"description =": null}`
+* `IS NOT NULL`: `{"description <>": null}`, `{"description !=": null}`, `{"description !": null}`
+* `IS DISTINCT FROM` (null-sensitive `<>`): `{"color is distinct from": "red"}`
+* `IS NOT DISTINCT FROM` (null-sensitive `=`): `{"color is not distinct from": "red"}`
 
-db.products.find({"id > " : 2}, function(err, res){
-  // all products having id greater than 2
-});
-```
+#### Membership
+* `IN` (membership): `{id: [10, 21]}`
+* `NOT IN` (absence): `{"id <>": [10, 21]}`
+
+#### Array Membership
+* `@>` (contains): `{"categories @>": ["things", "stuff"]}`
+* `<@` (contained by): `{"categories <@": ["things", "stuff"]}`
+* `&&` (overlap): `{"categories &&": ["things", "stuff"]}`
+
+#### Pattern Matching
+* `LIKE` (match): `{"name like": "%New and Improved%"}`, `{"name ~~": "%New and Improved%"}`
+* `NOT LIKE` (no match): `{"name not like": "%New and Improved%"}`, `{"name !~~": "%New and Improved%"}`
+* `ILIKE` (case-insensitive match): `{"name ilike": "%new and improved%"}`, `{"name ~~*": "%new and improved%"}`
+* `NOT ILIKE` (no case-insensitive match): `{"name not ilike": "%new and improved%"}`, `{"name !~~*": "%new and improved%"}`
+* `SIMILAR TO` (regexlike match): `{"name similar to": "%New (and|\&) Improved%"}`
+* `NOT SIMILAR TO` (no regexlike match): `{"name not similar to": "%New (and|\&) Improved%"}`
+
+#### Regular Expressions
+Postgres supports the POSIX standard for regular expressions.
+
+* `~` (case-sensitive match): `{"name ~": "%New (and|\&) Improved%"}`
+* `!~` (no case-sensitive match): `{"name !~": "%New (and|\&) Improved%"}`
+* `~*` (case-insensitive match): `{"name ~*": "%new (and|\&) improved%"}`
+* `!~*` (no case-insensitive match): `{"name !~*": "%new (and|\&) improved%"}`
 
 ### Predicate Subgroups
 The standard object syntax generates a predicate which simply ANDs together all
@@ -103,6 +129,12 @@ db.products.find({
 `or` may be used in conjunction with the standard object criteria syntax, and
 supports operations, null values, JSON drilldown, and everything else allowable
 in the standard set.
+
+### Casting
+
+Postgres syntax for casting is supported for simple cases: 
+`{'field::text LIKE': '%value%'}` and the like. More complex casts such as from
+JSON or JSONB traversal operations are not supported in the criteria API as yet.
 
 ### Query Options
 
@@ -129,19 +161,46 @@ use, except for `columns`. Meanwhile, `findDoc` always returns entire documents,
 ignoring `columns`.
 
 ```js
-db.products.find(
-  {
-    in_stock: true
-  }, {
-    columns: ["name", "price", "description"],
-    order: "price desc",
-    offset: 20,
-    limit: 10
-  }, function (err, products) {
+db.products.find({
+  in_stock: true
+}, {
+  columns: ["name", "price", "description"],
+  order: "price desc",
+  offset: 20,
+  limit: 10
+}, function (err, products) {
   // ten name/price/description objects, ordered by price high to low, skipping
   // the twenty most expensive products
 });
 ```
+
+#### Complex Ordering
+
+The simplest possible `order` is a string which will be directly interpolated
+into the emitted query. However, Massive can also assemble an `ORDER BY` clause
+from an array of expressions.
+
+Each element in the array _must_ contain a `field` representing the expression
+being sorted on, generally the name of a column. The `direction` may be `asc` or
+`desc`. If the expression requires casting (common for sorting properties of
+JSON fields) the `type` determines that.
+
+```js
+db.products.find({
+  in_stock: true
+}, {
+  order: [
+    {field: "price", direction: "desc"},
+    {field: "specs->>'height'", direction: "asc", type: "int"}
+  ]
+}, function (err, products) {...});
+```
+
+If you're querying a document table and don't want to write out all the 
+`body->>'field'` boilerplate yourself you can set `options.orderBody` to true
+and Massive will handle it. The one major limitation is that this allows you to
+sort _only_ by fields in the document body, since the traversal operator is
+applied to every order expression.
 
 ### JSON Drilldown
 
