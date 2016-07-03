@@ -24,6 +24,14 @@ describe('Document queries', function () {
       });
     });
 
+    it('returns all documents when passed an empty conditions block', function (done) {
+      db.docs.findDoc({}, function(err,res) {
+        assert.ifError(err);
+        assert.equal(res.length, 3);
+        done();
+      });
+    });
+
     it('returns all documents when passed only "next" function', function (done) {
       db.docs.findDoc(function(err,res){
         assert.ifError(err);
@@ -178,6 +186,20 @@ describe('Document queries', function () {
         done();
       });
     });
+
+    it('orders by fields in the document body with criteria', function (done) {
+      db.docs.findDoc('*', {
+        order: [{field: 'title', direction: 'desc', type: 'varchar'}], 
+        orderBody: true
+      }, function (err, res) {
+        assert.ifError(err);
+        assert.equal(res.length, 3);
+        assert.equal(res[0].title, 'Starsky and Hutch');
+        assert.equal(res[1].title, 'Another Document');
+        assert.equal(res[2].title, 'A Document');
+        done();
+      });
+    });
   });
 
   describe('Full Text Search', function () {
@@ -257,6 +279,34 @@ describe('Document queries', function () {
           assert.equal(docs[1].id, docs2[0].id);
           done();
         });
+      });
+    });
+
+    it('returns right elements if filter is specified', function (done) {
+      db.docs.searchDoc({
+        keys : ["title"],
+        term : "Document",
+        where: {'price': 22.00}
+      }, function(err, docs){
+        assert.ifError(err);
+        assert.equal(docs.length, 1);
+        done();
+      });
+    });
+
+    it('orders by fields in the document body with criteria', function (done) {
+      db.docs.searchDoc({
+        keys: ["title"],
+        term: "Document"
+      }, {
+        order: [{field: 'title', direction: 'desc', type: 'varchar'}],
+        orderBody: true
+      }, function (err, res) {
+        assert.ifError(err);
+        assert.equal(res.length, 2);
+        assert.equal(res[0].title, 'Another Document');
+        assert.equal(res[1].title, 'A Document');
+        done();
       });
     });
   });
