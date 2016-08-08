@@ -1,11 +1,6 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE SCHEMA public;
 
-drop materialized view if exists mv_orders;
-drop table if exists "Users";
-drop table if exists products cascade;
-drop table if exists uuid_docs;
-drop table if exists docs;
-drop table if exists orders;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 create table "Users"(
   "Id" serial primary key,
@@ -66,10 +61,7 @@ values('{"title":"A Document","price":22,"description":"lorem ipsum etc","is_goo
 ('{"title":"Another Document","price":18,"description":"Macaroni and Cheese","is_good":true,"created_at":"2015-03-04T09:43:41.643Z"}'),
 ('{"title":"Starsky and Hutch","price":6,"description":"Two buddies fighting crime","is_good":false,"created_at":"1977-03-04T09:43:41.643Z","studios": [{"name" : "Warner"}, {"name" : "Universal"}]}');
 
-insert into uuid_docs(body)
-values('{"title":"A Document","price":22,"description":"lorem ipsum etc","is_good":true,"created_at":"2015-03-04T09:43:41.643Z"}'),
-('{"title":"Another Document","price":18,"description":"Macaroni and Cheese","is_good":true,"created_at":"2015-03-04T09:43:41.643Z"}'),
-('{"title":"Starsky and Hutch","price":6,"description":"Two buddies fighting crime","is_good":false,"created_at":"1977-03-04T09:43:41.643Z","studios": [{"name" : "Warner"}, {"name" : "Universal"}]}');
+insert into uuid_docs(body) values ('{"things": "stuff"}');
 
 insert into orders(product_id, user_id, notes)
 values (1, 1, 'user 1 ordered product 1'),
@@ -78,27 +70,13 @@ values (1, 1, 'user 1 ordered product 1'),
 
 create materialized view mv_orders as select * from orders;
 
--- schema stuff:
-drop table if exists myschema.artists cascade;
-drop table if exists myschema.albums cascade; -- drops functions too
-drop table if exists myschema.docs;
-
--- just in case:
-drop table if exists myschema.doggies;
-drop schema if exists myschema;
-
 create schema myschema;
 
 -- Added for testing filtering on load:
 
-drop table if exists secrets.__secret_table cascade;
-drop table if exists secrets.__semi_secret_table cascade;
-drop schema if exists secrets;
-
 create schema secrets;
 create table secrets.__secret_table (id serial primary key, secret_stuff text);
 create table secrets.__semi_secret_table (id serial primary key, semi_secret_stuff text);
-
 
 create table myschema.artists (
   id serial primary key,
