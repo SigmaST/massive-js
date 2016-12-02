@@ -36,6 +36,7 @@
     "glob": "^7.1.1",
     "pg": "^6.1.0",
     "pg-query-stream": "^1.0.0",
+    "promise-polyfill": "^6.0.2",
     "strip-bom": "^3.0.0",
     "underscore": "^1.8.3"
   },
