@@ -14,3 +14,7 @@ Session.vim
 play.js
 coverage
 .idea
+out
+.nyc_output
+docs/_site
+docs/.sass-cache

@@ -1,124 +1,46 @@
-## Function Loading
-Massive treats Postgres functions as first-class citizens. Every function in the database is loaded into a corresponding function on the instance object. Just like tables and views, functions in non-public schemata are namespaced accordingly. Names are case-sensitive: `all_products` and `All_Products` functions in the database will both be loaded into Massive.
+# Functions
 
-Database functions are loaded after tables and views, and so will win collisions. Function loading may be omitted by including `{excludeFunctions: true}` in the `connect()` args.
+Object-relational mappers tend to ignore functions. For many, the database exists solely as a repository, with data manipulation reserved for application logic and external jobs.
 
-```sql
-create or replace function products_in_stock()
-returns setof products
-as
-$$
-select * from products where in_stock = true;
-$$
-language sql;
-```
+To be fair, this setup is perfectly sufficient for many use cases. But when it isn't, it _hurts_. With functions, you can perform complex operations on your data at a scope and speed unrivaled by anything else. Why go to the trouble of querying bulk data into another system and manipulating it -- only to put it back where it was with a second trip across the wire? Especially when there's a powerful, flexible language purpose-built for set operations _right there_? You wouldn't work that way, and Massive won't make you: functions are first-class citizens as far as it's concerned.
 
-## The DB Directory
-Massive doesn't stop at the functions present in the database itself. On startup, it looks for a `db` directory at the root of your project (this may be overridden by passing a `scripts` property in the `connect()` args) and loads each SQL file present as a top-level function on the instance object. Each function will have the same name as the script file, sans the `.sql` extension. Subdirectories act as namespaces in a manner similar to the loading of database functions by schema.
+## Database Functions
 
-Script files are loaded last on initialization, and will override any already-loaded tables, views, or database functions with the same name.
+All functions visible to the connecting role are attached to the Massive instance, unless the loader configuration restricts function loading. See the [Connecting](connecting) chapter for more information.
 
-A simple query script file named `products_in_stock.sql` residing in the appropriate `db` directory reproduces the products_in_stock database function above:
+## The Scripts Directory
 
-```sql
-select * from products
-where in_stock = true;
-```
+Massive doesn't stop at the functions present in the database itself: on startup, it looks for script files in your project and loads them up too. These files are prepared statements and can use `$1`-style placeholders.
 
-Scripts may be parameterized, using the standard $x notation:
+By default, Massive searches the `/db` directory, but this can be customized by setting the `scripts` property in the loader configuration. The scripts directory can contain further subdirectories; like schemas, these are treated as namespaces. Unlike schemas, they can be nested to arbitrary depth.
 
-```sql
-select * from products
-where in_stock = $1 and price < $2;
-```
+Like `run`, prepared statements in script files can use named parameters instead of `$1`-style indexed parameters. Named parameters are formatted `${name}`. Other delimiters besides braces are supported; consult the pg-promise documentation for a full accounting.
 
-## Function Invocation
-Functions are invoked in the same way regardless of whether they were originally defined in the database or in script files. For asynchronous invocation, the callback will always take the form of a function with error and result arguments.
+Prepared statement scripts must consist of one and only one SQL statement. Common table expressions or CTEs can take some of the sting out of this requirement, but if you need to execute multiple statements with arbitrary parameters it's time to turn it into a proper function.
 
-```js
-var massive = require("massive");
+## Invocation
 
-massive.connect({
-  connectionString: "postgres://localhost/massive"}, function(err, db) {
-  //products_in_stock may be either a function on the database or a SQL file in /db
-  db.products_in_stock(function(err, products) {
-    //products is a results array
-  });
+Massive treats functions and scripts identically. Each is attached as a function which may be invoked directly. Parameters may be passed in one by one or as an array. Results are returned in the usual Massive style as an array of objects.
+
+If `enhancedFunctions` is set to `true` in the loader configuration, functions returning scalars or flat arrays will be intercepted and the results massaged into scalars or flat arrays, as appropriate. Since this represents a departure from the consistent form, it must be explicitly enabled on initialization.
+
+```javascript
+db.uuid_generate_v1mc().then(arr => {
+  // an array containing the generated UUID (requires the
+  // uuid-ossp extension)
+});
+
+db.myTestQueries.restartTests(5, true).then(results => {
+  // this runs the prepared statement in
+  // db/myTestQueries/restartTests.sql with the above
+  // parameters and returns any output from a RETURNING clause
+});
+
+db.myTestQueries.restartTests({
+  category: 5,
+  force: true
+}).then(results => {
+  // as above; the prepared statement should use ${category}
+  // and ${force} instead of $1 and $2.
 });
 ```
-
-### Experimental: Enhanced Functions
-
-Massive can interpret the return types of functions, however this breaks backwards compatibility and thus must be opted into with setting `enhancedFunctions: true`.
-
-For example, if you have this [getRandomNumber function](https://xkcd.com/221/):
-
-```sql
-create function myschema."getRandomNumber"()
-returns integer as $$
-select 4; -- chosen by fair dice roll.
-          -- guaranteed to be random.
-$$ language sql;
-```
-
-Without `enhancedFunctions` you'd get the same results as a regular table fetch - a set of rows: `[{"getRandomNumber": 4}]`.
-
-With `enhancedFunctions: true`, you'd get simply the result of the function: `4`.
-
-```js
-var massive = require("massive");
-
-massive.connect({
-  connectionString: "postgres://localhost/massive",
-  enhancedFunctions: true // Enable return type honoring
-}, function(err, db) {
-  db.getRandomNumber(function(err, randomNumber) {
-    //randomNumber is the integer 4
-  });
-});
-```
-
-This also works for text, arrays, JSON, text domains and some other types. If it doesn't work for your use case, please raise an issue (or a PR!); we're aware of some restrictions due to [how the pg module currently handles types](https://github.com/brianc/node-postgres/issues/986).
-
-## Parameters
-Many, if not most, functions will expect some sort of input.
-
-```js
-var massive = require("massive");
-
-massive.connect({
-  connectionString: "postgres://localhost/massive"}, function(err, db) {
-  db.top_x_products(5, function(err, products) {
-    //products is a results array
-  });
-});
-```
-
-And you can do that with multiple inputs as well:
-
-```js
-var massive = require("massive");
-
-massive.connect({
-  connectionString: "postgres://localhost/massive"}, function(err, db) {
-  db.top_x_products_by_country(5, 'US', function(err, products) {
-    //products is a results array
-  });
-});
-```
-
-You may also pass in multiple arguments as a single Array, but you do not have to:
-
-```js
-var massive = require("massive");
-
-massive.connect({
-  connectionString: "postgres://localhost/massive"}, function(err, db) {
-  db.top_x_products_by_country([5, 'US'], function(err, products) {
-    //products is a results array
-  });
-});
-```
-
-The inputs must be scalars.  You may not pass in objects or arrays as arguments per-se.  You are allowed to group all inputs into an array and pass them in as that (as demonstrated in the last example), should you like to do so.
-
