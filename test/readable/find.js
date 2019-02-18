@@ -404,6 +404,45 @@ describe('find', function () {
         assert.equal(Object.keys(res).length, 1);
       });
     });
+
+    it('uses keyset pagination', function () {
+      return db.products.find({}, {order: [{field: 'id', direction: 'asc', last: 2}], pageLength: 2}).then(res => {
+        assert.lengthOf(res, 2);
+        assert.equal(res[0].id, 3);
+        assert.equal(res[1].id, 4);
+      });
+    });
+
+    it('uses keyset pagination with descending order', function () {
+      return db.products.find({}, {order: [{field: 'id', direction: 'desc', last: 3}], pageLength: 2}).then(res => {
+        assert.lengthOf(res, 2);
+        assert.equal(res[0].id, 2);
+        assert.equal(res[1].id, 1);
+      });
+    });
+
+    it('uses keyset pagination with exprs', function () {
+      return db.products.find({}, {order: [{expr: '0 - id', direction: 'desc', last: 3}], pageLength: 2}).then(res => {
+        assert.lengthOf(res, 2);
+        assert.equal(res[0].id, 1);
+        assert.equal(res[1].id, 2);
+      });
+    });
+
+    it('combines keyset pagination with existing criteria', function () {
+      return db.products.find({'price >': 20}, {order: [{field: 'id', last: 2}], pageLength: 2}).then(res => {
+        assert.lengthOf(res, 2);
+        assert.equal(res[0].id, 3);
+        assert.equal(res[1].id, 4);
+      });
+    });
+
+    it('changes null positioning', function () {
+      return db.products.find({}, {order: [{field: 'specs', nulls: 'first'}]}).then(res => {
+        assert.lengthOf(res, 4);
+        assert.isNull(res[0].specs);
+      });
+    });
   });
 
   describe('casing issues', function () {
@@ -542,10 +581,12 @@ describe('find', function () {
         const result = [];
 
         stream.on('readable', function () {
-          const res = stream.read();
+          let res;
 
-          if (res) {
-            result.push(res);
+          while (res = stream.read()) { // eslint-disable-line no-cond-assign
+            if (res) {
+              result.push(res);
+            }
           }
         });
 

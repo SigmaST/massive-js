@@ -2,6 +2,193 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.7.6](https://github.com/dmfay/massive-js/compare/v5.7.5...v5.7.6) (2019-02-18)
+
+
+### Bug Fixes
+
+* simplify executable clone to improve performance in tasks/transactions (fixes [#673](https://github.com/dmfay/massive-js/issues/673)) ([#674](https://github.com/dmfay/massive-js/issues/674)) ([bf1c5df](https://github.com/dmfay/massive-js/commit/bf1c5df))
+
+
+
+<a name="5.7.5"></a>
+## [5.7.5](https://github.com/dmfay/massive-js/compare/v5.7.4...v5.7.5) (2019-02-06)
+
+
+### Bug Fixes
+
+* cache and restore custom pg-promise receive option ([#665](https://github.com/dmfay/massive-js/issues/665)) ([f70847f](https://github.com/dmfay/massive-js/commit/f70847f))
+* **package:** update pg-promise to version 8.5.5 ([489f443](https://github.com/dmfay/massive-js/commit/489f443))
+
+
+
+<a name="5.7.4"></a>
+## [5.7.4](https://github.com/dmfay/massive-js/compare/v5.7.3...v5.7.4) (2019-01-25)
+
+
+### Bug Fixes
+
+* recognize stringified ints as primary key search criteria ([7ad4116](https://github.com/dmfay/massive-js/commit/7ad4116))
+
+
+
+<a name="5.7.3"></a>
+## [5.7.3](https://github.com/dmfay/massive-js/compare/v5.7.2...v5.7.3) (2019-01-20)
+
+
+### Bug Fixes
+
+* document queries include only the relevant key-value pair in criteria when matching nested arrays (fixes [#662](https://github.com/dmfay/massive-js/issues/662)) ([545aae1](https://github.com/dmfay/massive-js/commit/545aae1))
+* **package:** update pg-promise to version 8.5.4 ([7e08207](https://github.com/dmfay/massive-js/commit/7e08207))
+* **package:** update pg-query-stream to version 2.0.0 ([dbde097](https://github.com/dmfay/massive-js/commit/dbde097))
+
+
+
+<a name="5.7.2"></a>
+## [5.7.2](https://github.com/dmfay/massive-js/compare/v5.7.1...v5.7.2) (2018-12-19)
+
+
+### Bug Fixes
+
+* cast date parameter values to timestamptz ([#658](https://github.com/dmfay/massive-js/issues/658)) ([231e944](https://github.com/dmfay/massive-js/commit/231e944))
+* used cached promise implementation in executable error path ([50ba7c5](https://github.com/dmfay/massive-js/commit/50ba7c5))
+
+
+
+<a name="5.7.1"></a>
+## [5.7.1](https://github.com/dmfay/massive-js/compare/v5.7.0...v5.7.1) (2018-12-12)
+
+
+### Bug Fixes
+
+* use cached promise implementation to cover transaction resolve/reject edge cases ([d319ca4](https://github.com/dmfay/massive-js/commit/d319ca4))
+
+
+
+<a name="5.7.0"></a>
+# [5.7.0](https://github.com/dmfay/massive-js/compare/v5.6.0...v5.7.0) (2018-12-05)
+
+
+### Bug Fixes
+
+* **package:** update pg-promise to version 8.5.3 ([2b938f9](https://github.com/dmfay/massive-js/commit/2b938f9))
+
+
+### Features
+
+* add saveDocs method for multiple docs (resolves [#318](https://github.com/dmfay/massive-js/issues/318)) ([#653](https://github.com/dmfay/massive-js/issues/653)) ([6452bb1](https://github.com/dmfay/massive-js/commit/6452bb1))
+
+
+
+<a name="5.6.0"></a>
+# [5.6.0](https://github.com/dmfay/massive-js/compare/v5.5.3...v5.6.0) (2018-11-27)
+
+
+### Features
+
+* nested conjunctions in criteria objects with 'and' key ([#651](https://github.com/dmfay/massive-js/issues/651)) ([7aebccc](https://github.com/dmfay/massive-js/commit/7aebccc))
+
+
+
+<a name="5.5.3"></a>
+## [5.5.3](https://github.com/dmfay/massive-js/compare/v5.5.1...v5.5.3) (2018-11-10)
+
+
+### Bug Fixes
+
+* pass undefined args to query() for scripts without parameters (fixes [#649](https://github.com/dmfay/massive-js/issues/649)) ([1a1c0a6](https://github.com/dmfay/massive-js/commit/1a1c0a6))
+* **package:** update pg-promise to version 8.5.2 ([cc7afc3](https://github.com/dmfay/massive-js/commit/cc7afc3))
+
+
+
+<a name="5.5.2"></a>
+## [5.5.2](https://github.com/dmfay/massive-js/compare/v5.5.1...v5.5.2) (2018-11-10)
+
+
+### Bug Fixes
+
+* pass undefined args to query() for scripts without parameters (fixes [#649](https://github.com/dmfay/massive-js/issues/649)) ([c5f1894](https://github.com/dmfay/massive-js/commit/c5f1894))
+
+
+
+<a name="5.5.1"></a>
+## [5.5.1](https://github.com/dmfay/massive-js/compare/v5.5.0...v5.5.1) (2018-10-17)
+
+
+### Bug Fixes
+
+* **package:** update commander to version 2.19.0 ([68d72e3](https://github.com/dmfay/massive-js/commit/68d72e3))
+* correct param defaults for Database.query ([49e6af3](https://github.com/dmfay/massive-js/commit/49e6af3))
+* **package:** update pg-promise and pg-query-stream to the latest version 🚀 ([#641](https://github.com/dmfay/massive-js/issues/641)) ([8de72f8](https://github.com/dmfay/massive-js/commit/8de72f8))
+
+
+
+<a name="5.5.0"></a>
+# [5.5.0](https://github.com/dmfay/massive-js/compare/v5.4.0...v5.5.0) (2018-09-30)
+
+
+### Features
+
+* introspect and load enums as static db.enums ([095266f](https://github.com/dmfay/massive-js/commit/095266f))
+
+
+
+<a name="5.4.0"></a>
+# [5.4.0](https://github.com/dmfay/massive-js/compare/v5.3.0...v5.4.0) (2018-09-16)
+
+
+### Bug Fixes
+
+* **package:** update commander to version 2.18.0 ([c2209ee](https://github.com/dmfay/massive-js/commit/c2209ee))
+* **package:** update lodash to version 4.17.11 ([8863a10](https://github.com/dmfay/massive-js/commit/8863a10))
+* correct where generation logic from bad merge ([5891b00](https://github.com/dmfay/massive-js/commit/5891b00))
+
+
+### Features
+
+* load non-pk sequences and get current value ([a2912b2](https://github.com/dmfay/massive-js/commit/a2912b2))
+* reset and increment sequences ([3796b27](https://github.com/dmfay/massive-js/commit/3796b27))
+* restrict returned fields from persistence queries ([8a10110](https://github.com/dmfay/massive-js/commit/8a10110))
+
+
+
+<a name="5.3.0"></a>
+# [5.3.0](https://github.com/dmfay/massive-js/compare/v5.2.1...v5.3.0) (2018-09-07)
+
+
+### Features
+
+* specify null sorting in order by ([149b7b9](https://github.com/dmfay/massive-js/commit/149b7b9))
+
+
+
+<a name="5.2.1"></a>
+## [5.2.1](https://github.com/dmfay/massive-js/compare/v5.2.0...v5.2.1) (2018-09-05)
+
+
+### Bug Fixes
+
+* **package:** update glob to version 7.1.3 ([f8ec670](https://github.com/dmfay/massive-js/commit/f8ec670))
+* **package:** update pg-promise to version 8.4.6 ([8a885f1](https://github.com/dmfay/massive-js/commit/8a885f1))
+
+
+
+<a name="5.2.0"></a>
+# [5.2.0](https://github.com/dmfay/massive-js/compare/v5.1.3...v5.2.0) (2018-08-12)
+
+
+### Bug Fixes
+
+* **package:** update commander to version 2.17.0 ([74a784f](https://github.com/dmfay/massive-js/commit/74a784f))
+* **package:** update commander to version 2.17.1 ([3b60ea9](https://github.com/dmfay/massive-js/commit/3b60ea9))
+
+
+### Features
+
+* keyset pagination on sorted queries ([1ce70c7](https://github.com/dmfay/massive-js/commit/1ce70c7))
+
+
+
 <a name="5.1.3"></a>
 ## [5.1.3](https://github.com/dmfay/massive-js/compare/v5.1.2...v5.1.3) (2018-07-17)
 

@@ -94,27 +94,24 @@ Writable.prototype.getPkCriteria = function (record) {
  */
 Writable.prototype.insert = function (data, options) {
   if (!this.insertable) {
-    return this.db.instance.$config.promise.reject(new Error(`${this.name} is not writable`));
+    return this.db.$p.reject(new Error(`${this.name} is not writable`));
   } else if (!data) {
-    return this.db.instance.$config.promise.reject(new Error('Must provide data to insert'));
+    return this.db.$p.reject(new Error('Must provide data to insert'));
   }
 
   const insert = new Insert(this, data, options);
 
   if (insert.params.length === 0) {
     // just return empty arrays so bulk inserting variable-length lists is more friendly
-    return this.db.instance.$config.promise.resolve([]);
+    return this.db.$p.resolve([]);
   }
 
   return this.db.query(insert);
 };
 
 /**
- * Update a record.
- *
- * May be invoked with a complete record (including primary key), or with a
- * criteria object and a map of fields to new values. Multi-row updates are
- * only possible through the latter usage.
+ * Update a record with a criteria object and a map of changed fields to their
+ * new values.
  *
  * @param {String|Number|Object} criteria - Primary key of the record, or a
  * criteria object.
@@ -125,9 +122,9 @@ Writable.prototype.insert = function (data, options) {
  */
 Writable.prototype.update = function (criteria, changes, options = {}) {
   if (!this.insertable) {
-    return this.db.instance.$config.promise.reject(new Error(`${this.name} is not writable`));
+    return this.db.$p.reject(new Error(`${this.name} is not writable`));
   } else if (!_.isObjectLike(changes) || _.isArray(changes)) {
-    return this.db.instance.$config.promise.reject(new Error('Update requires a hash of fields=>values to update to'));
+    return this.db.$p.reject(new Error('Update requires a hash of fields=>values to update to'));
   } else if (_.isEmpty(changes)) {
     // there's nothing to update, so just return the matching records
     return this.find(criteria, options);
@@ -154,9 +151,9 @@ Writable.prototype.update = function (criteria, changes, options = {}) {
  */
 Writable.prototype.save = function (record, options = {}) {
   if (!this.pk) {
-    return this.db.instance.$config.promise.reject(new Error(`${this.name} has no primary key, use insert or update to write to this table`));
+    return this.db.$p.reject(new Error(`${this.name} has no primary key, use insert or update to write to this table`));
   } else if (!_.isObjectLike(record) || _.isArray(record)) {
-    return this.db.instance.$config.promise.reject(new Error('Must provide an object with all fields being modified and the primary key if updating'));
+    return this.db.$p.reject(new Error('Must provide an object with all fields being modified and the primary key if updating'));
   }
 
   const keys = _.keys(record);
@@ -198,7 +195,7 @@ Writable.prototype.destroy = function (criteria, options) {
  */
 Writable.prototype.saveDoc = function (doc) {
   if (!_.isObjectLike(doc) || _.isArray(doc)) {
-    return this.db.instance.$config.promise.reject('Please pass in the document for saving as an object. Include the primary key for an UPDATE.');
+    return this.db.$p.reject('Please pass in the document for saving as an object. Include the primary key for an UPDATE.');
   }
 
   const options = {single: true, document: true, generator: 'docGenerator'};
@@ -219,6 +216,25 @@ Writable.prototype.saveDoc = function (doc) {
   }
 
   return this.db.query(new Insert(this, {body: doc}, options));
+};
+
+/**
+ * Save documents to the database. This function will create or replace the
+ * entire document body for each document.
+ *
+ * @param {Object} docs - The documents to persist.
+ * @return {Promise} The updated documents.
+ */
+Writable.prototype.saveDocs = function (docs) {
+  if (!_.isArray(docs)) {
+    return this.db.$p.reject('Please pass in the documents as an array of objects.');
+  }
+
+  if (!docs.every(_.isObjectLike)) {
+    return this.db.$p.reject('Please pass in valid documents. Include the primary key for an UPDATE.');
+  }
+
+  return this.db.$p.all(docs.map(this.saveDoc.bind(this)));
 };
 
 /**
@@ -272,13 +288,13 @@ module.exports = Writable;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_parseKey.html">util/parseKey</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Readable.html">Readable</a></li><li><a href="Select.html">Select</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Update.html">Update</a></li><li><a href="Writable.html">Writable</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li><li><a href="global.html#getDefaultSQLforUUID">getDefaultSQLforUUID</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_parseKey.html">util/parseKey</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Readable.html">Readable</a></li><li><a href="Select.html">Select</a></li><li><a href="Sequence.html">Sequence</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Update.html">Update</a></li><li><a href="Writable.html">Writable</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li><li><a href="global.html#getDefaultSQLforUUID">getDefaultSQLforUUID</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Jul 17 2018 11:54:34 GMT-0400 (EDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Feb 17 2019 20:02:52 GMT-0500 (Eastern Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

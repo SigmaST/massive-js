@@ -9,6 +9,8 @@ The JSONB type is a great solution to this problem, and Massive takes care of th
 <!-- vim-markdown-toc GFM -->
 
 * [Document Tables](#document-tables)
+  * [Primary Key Default Data Type](#primary-key-default-data-type)
+  * [Customizing Document Table Columns](#customizing-document-table-columns)
   * [db.saveDoc](#dbsavedoc)
 * [Querying Documents](#querying-documents)
   * [A Note About Criteria](#a-note-about-criteria)
@@ -29,7 +31,7 @@ Standard table functions still work on document tables, and can be quite useful 
 
 `findDoc` **is still preferred** to JSON queries if at all possible since it uses the `@>` "contains" operator to leverage indexing on the document body to improve performance.
 
-### Primary key default data type
+### Primary Key Default Data Type
 
 The default primary key data type used for all tables including document tables is 'serial', which by default begins at 1 for the first record created and for every new record increments by 1. However, it is possible to change the primary key data type used for new document tables to 'uuid' (Universal Unique Identifier).
 
@@ -41,7 +43,19 @@ Note: The connected database requires the extension 'uuid-ossp', in order to sup
 
 Please see [loader configuration and filtering](connecting#loader-configuration-and-filtering) for help setting these options.
 
+### Customizing Document Table Columns
+
 Document tables may be extended with new columns and foreign keys. The `id` type can be changed as well (so long as a default is set such as `uuid_generate_v1mc()` or `uuid_generate_v4()` etc. for UUID types) without impeding usage of document table functions. Just don't _remove_ any columns or change their names, since Massive depends on those.
+
+If you use a migration framework or just want to generate your schema ahead of time, it's easiest to just copy the DDL out of [the document table script](https://github.com/dmfay/massive-js/blob/master/lib/scripts/document-table.sql). Fill in the placeholder tokens:
+
+| Name      | Value |
+|-----------|-------|
+| schema    | Name of the schema owning the document table. |
+| table     | Name of the document table. |
+| index     | Document tables created through Massive use schema_table, but you can fill in anything you like. |
+| pkType    | Either `SERIAL` or `UUID`. |
+| pkDefault | (Omit if `SERIAL` pkType) one of the [UUID generating functions](#primary-key-default-data-type). |
 
 ### db.saveDoc
 
@@ -64,6 +78,15 @@ db.saveDoc('reports', {
 ```
 
 If the table already exists, you can still use `db.saveDoc`, but you can also invoke `saveDoc` on the table itself.
+
+`saveDocs` can be used for saving multiple documents. The documents being saved must be all new, or all existing.
+
+```javascript
+db.saveDocs('books', [
+  {title: 'The Grapes of Wrath'},
+  {title: 'The Jungle'}
+]).then(console.log);
+```
 
 ## Querying Documents
 
@@ -170,6 +193,23 @@ db.reports.saveDoc({
   // the newly created report
 });
 ```
+
+### saveDocs
+
+`saveDocs` inserts or updates a list of documents (must be all new or all existing).
+
+db.books.saveDocs([
+  {
+    title: 'The Grapes of Wrath',
+    author: 'John Steinbeck'
+  } , {
+
+    title: 'The Jungle',
+    author: 'Upton Sinclair'
+  }
+]).then(books => {
+  // handle the list of saved books
+});
 
 ### updateDoc
 

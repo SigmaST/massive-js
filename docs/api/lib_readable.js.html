@@ -32,7 +32,6 @@ const _ = require('lodash');
 const util = require('util');
 const Entity = require('./entity');
 const Select = require('./statement/select');
-const where = require('./statement/where');
 
 const isUuid = new RegExp(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
 
@@ -165,8 +164,11 @@ Readable.prototype.isPkSearch = function (criteria) {
   // disqualify non-tables and foreign tables
   if (!this.pk) { return false; }
 
-  if (_.isNumber(criteria) || (_.isString(criteria) &amp;&amp; isUuid.test(criteria))) {
-    // primitive value
+  if (_.isNumber(criteria)) {
+    // ordinary numeric pk
+    return true;
+  } else if (_.isString(criteria) &amp;&amp; (+criteria === +criteria || isUuid.test(criteria))) { // eslint-disable-line no-self-compare
+    // stringified number or uuid
     return true;
   } else if (_.isPlainObject(criteria)) {
     const criteriaKeys = Object.keys(criteria);
@@ -188,15 +190,15 @@ Readable.prototype.isPkSearch = function (criteria) {
  * @param {Object} plan - Search definition.
  * @param {Array} plan.fields - List of the fields to search.
  * @param {String} plan.term - Search term.
+ * @param {Object} plan.where - Criteria object to filter results.
  * @param {Object} [options] - {@link https://dmfay.github.io/massive-js/options.html|Select options}.
  * @return {Promise} An array containing any query results.
  */
 Readable.prototype.search = function (plan, options = {}) {
   if (!plan.fields || !plan.term) {
-    return this.db.instance.$config.promise.reject('Need fields as an array and a term string');
+    return this.db.$p.reject('Need fields as an array and a term string');
   }
 
-  const params = [plan.term];
   let tsv;
 
   if (plan.fields.length === 1) {
@@ -210,15 +212,9 @@ Readable.prototype.search = function (plan, options = {}) {
 
   const criteria = {
     conditions: `to_tsvector(${tsv}) @@ to_tsquery($1)`,
-    params
+    params: [plan.term],
+    where: plan.where
   };
-
-  if (plan.where) {
-    const searchWhere = where(plan.where);
-
-    criteria.conditions += ` AND ${searchWhere.conditions}`;
-    criteria.params = criteria.params.concat(searchWhere.params);
-  }
 
   const query = new Select(this, criteria, options);
 
@@ -236,10 +232,8 @@ Readable.prototype.search = function (plan, options = {}) {
  */
 Readable.prototype.searchDoc = function (plan, options = {}) {
   if (!plan.term) {
-    return this.db.instance.$config.promise.reject('Need fields as an array and a term string');
+    return this.db.$p.reject('Need fields as an array and a term string');
   }
-
-  options.document = true;
 
   let tsv;
 
@@ -258,15 +252,12 @@ Readable.prototype.searchDoc = function (plan, options = {}) {
 
   const criteria = {
     conditions: `${tsv} @@ to_tsquery($1)`,
-    params: [plan.term]
+    params: [plan.term],
+    where: plan.where,
+    nestedGenerator: options.document ? 'docGenerator' : 'tableGenerator'
   };
 
-  if (plan.where) {
-    const searchWhere = where(plan.where, 1, options.document ? 'docGenerator' : 'tableGenerator');
-
-    criteria.conditions += ` AND ${searchWhere.conditions}`;
-    criteria.params = criteria.params.concat(searchWhere.params);
-  }
+  options.document = true;  // ensure document result handling activates
 
   const query = new Select(this, criteria, options);
 
@@ -302,13 +293,13 @@ module.exports = Readable;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_parseKey.html">util/parseKey</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Readable.html">Readable</a></li><li><a href="Select.html">Select</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Update.html">Update</a></li><li><a href="Writable.html">Writable</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li><li><a href="global.html#getDefaultSQLforUUID">getDefaultSQLforUUID</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_parseKey.html">util/parseKey</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Readable.html">Readable</a></li><li><a href="Select.html">Select</a></li><li><a href="Sequence.html">Sequence</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Update.html">Update</a></li><li><a href="Writable.html">Writable</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li><li><a href="global.html#getDefaultSQLforUUID">getDefaultSQLforUUID</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Jul 17 2018 11:54:34 GMT-0400 (EDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Feb 17 2019 20:02:52 GMT-0500 (Eastern Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

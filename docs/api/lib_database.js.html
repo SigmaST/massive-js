@@ -37,6 +37,7 @@ const QueryStream = require('pg-query-stream');
 const Executable = require('./executable');
 const Readable = require('./readable');
 const Writable = require('./writable');
+const Sequence = require('./sequence');
 const Entity = require('./entity');
 const decompose = require('./util/decompose');
 const docify = require('./util/docify');
@@ -228,6 +229,13 @@ Database.prototype.clean = function () {
 Database.prototype.reload = function () {
   this.clean();
 
+  // cache pg-promise receive option config
+  let receiveOptionCached;
+  if (this.instance.$config &amp;&amp; this.instance.$config.options) {
+    receiveOptionCached = this.instance.$config.options.receive;
+    delete this.instance.$config.options.receive;
+  }
+
   const initPromises = [
     // get the current schema; this is usually 'public' unless someone
     // configured search_path in Postgres
@@ -260,17 +268,28 @@ Database.prototype.reload = function () {
 
   return this.$p.all(initPromises).then(() => {
     // run introspections and flatten the results into a single list of Entities
-    return this.$p.all(['tables', 'views', 'functions', 'scripts'].map(loader => {
+    return this.$p.all(['tables', 'views', 'functions', 'scripts', 'sequences', 'enums'].map(loader => {
       // first find and execute the loader function
       const loaderFunc = require(`./loader/${loader}`); // eslint-disable-line global-require
 
-      return loaderFunc(this.instance, this.loader).then(loaded => {
-        // then afterwards map whatever it got into objects defined by ctor
+      return loaderFunc(this).then(loaded => {
+        // enums get attached at a fixed point
+        if (loader === 'enums') {
+          this.enums = loaded;
+
+          return [];
+        }
+
+        // otherwise, map whatever it got into objects defined by ctor
         return loaded.map(obj => {
           obj = _.extend(obj, this.loader);
           obj.db = this;
           obj.path = !obj.schema || obj.schema === this.currentSchema ? obj.name : [obj.schema, obj.name].join('.');
           obj.loader = loader;
+
+          if (loader === 'sequences') {
+            return new (Function.prototype.bind.apply(Sequence, [null, obj]))();
+          }
 
           if (Object.prototype.hasOwnProperty.call(obj, 'is_insertable_into')) {
             if (obj.is_insertable_into) {
@@ -287,6 +306,12 @@ Database.prototype.reload = function () {
       return _.flatten(groupedObjects);
     }).then(objs => {
       this.attach(objs);
+
+      // restore pg-promise receive option config
+      // eslint-disable-next-line no-extra-boolean-cast
+      if (!!receiveOptionCached) {
+        this.instance.$config.options.receive = receiveOptionCached;
+      }
 
       return this;
     });
@@ -339,6 +364,21 @@ Database.prototype.listFunctions = function () {
 };
 
 /**
+ * List all the non-pk sequences attached to the connected instance.
+ *
+ * @return {Array} A list of sequence names.
+ */
+Database.prototype.listSequences = function () {
+  return this.objects.reduce((names, obj) => {
+    if (obj.loader === 'sequences') {
+      names.push(obj.path);
+    }
+
+    return names;
+  }, []);
+};
+
+/**
  * Execute a query.
  *
  * @param {Select|Insert|Update|Delete|String} query - One of the four statement
@@ -355,7 +395,7 @@ Database.prototype.listFunctions = function () {
  * resultset.
  * @return {Promise} Query results.
  */
-Database.prototype.query = function (query, params = [], options = {}) {
+Database.prototype.query = function (query, params = undefined, options = {}) {
   let sql;
 
   if (query instanceof this.pgp.QueryFile || _.isString(query)) {
@@ -390,19 +430,15 @@ Database.prototype.query = function (query, params = [], options = {}) {
 
     promise = this.$p((resolve, reject) => this.instance
       .stream(qs, classicStream => {
-        const readableStream = new stream.Readable({objectMode: true});
+        const transformStream = new stream.Transform({objectMode: true});
 
-        classicStream.on('data', data => {
-          readableStream.push(data);
-        });
+        transformStream._transform = (a, e, c) => {
+          transformStream.push(a);
 
-        classicStream.on('end', () => {
-          readableStream.push(null);
-        });
+          return c();
+        };
 
-        readableStream._read = () => {};
-
-        return resolve(readableStream);
+        resolve(classicStream.pipe(transformStream));
       })
       .catch(reject));
   } else {
@@ -429,17 +465,18 @@ Database.prototype.query = function (query, params = [], options = {}) {
  *
  * @param {Function} callback - A callback containing Massive API calls and SQL
  * queries to be made within the task scope.
- * @param {Object} [options] - Task options.
- * @param {String} [options.tag] - A tag for tracking the task's queries.
+ * @param {Object} [options] - {@link https://vitaly-t.github.io/pg-promise/Database.html#task|Task options}.
  * @return {Promise} A promise for the completed task, which will be fulfilled
  * if it succeeds and commits or rejected if it rolls back.
  */
 Database.prototype.withConnection = function (callback, options = {}) {
-  return this.instance.task(options, task => {
+  const args = pgp.utils.taskArgs([options, task => {
     const withTask = this.clone(task);
 
     return callback(withTask);
-  });
+  }]);
+
+  return this.instance.task.apply(this, args);
 };
 
 /**
@@ -448,17 +485,18 @@ Database.prototype.withConnection = function (callback, options = {}) {
  *
  * @param {Function} callback - A callback containing Massive API calls and SQL
  * queries to be made within the transaction scope.
- * @param {Object} [options] - Transaction options.
- * @param {TransactionMode} [options.mode] - A pg-promise TransactionMode.
+ * @param {Object} [options] - {@link https://vitaly-t.github.io/pg-promise/Database.html#tx|Transaction options}.
  * @return {Promise} A promise for the completed transaction, which will be
  * fulfilled if it succeeds and commits or rejected if it rolls back.
  */
 Database.prototype.withTransaction = function (callback, options = {}) {
-  return this.instance.tx(options, tx => {
+  const args = pgp.utils.taskArgs([options, tx => {
     const withTx = this.clone(tx);
 
     return callback(withTx);
-  });
+  }]);
+
+  return this.instance.tx.apply(this, args);
 };
 
 /**
@@ -472,7 +510,7 @@ Database.prototype.clone = function (conn) {
   const executables = [];
   const cloneDb = _.cloneDeepWith(this, prop => {
     if (typeof prop === 'function' &amp;&amp; Object.prototype.hasOwnProperty.call(prop, 'executable')) {
-      executables.push(_.cloneDeepWith(prop.executable, (val, key) => {
+      executables.push(_.cloneWith(prop.executable, (val, key) => {
         // QueryFiles are not cloneable, but since the only thing we actually
         // need to change is the db instance we can keep the original ref
         if (key === 'sql') {
@@ -517,6 +555,14 @@ Database.prototype.dropExtension = function (extensionName) {
   return this.query(`DROP EXTENSION IF EXISTS "${extensionName}";`);
 };
 
+const extractTable = function (collection, db) {
+  if (collection.startsWith(`${db.currentSchema}.`)) {
+    collection = collection.substring(db.currentSchema.length + 1);
+  }
+
+  return _.get(db, collection);
+};
+
 /**
  * Save a document.
  *
@@ -526,17 +572,29 @@ Database.prototype.dropExtension = function (extensionName) {
  * @return {Promise} The saved document.
  */
 Database.prototype.saveDoc = function (collection, doc) {
-  if (collection.startsWith(`${this.currentSchema}.`)) {
-    collection = collection.substring(this.currentSchema.length + 1);
-  }
-
-  const potentialTable = _.get(this, collection);
-
+  const potentialTable = extractTable(collection, this);
   if (potentialTable) {
     return potentialTable.saveDoc(doc);
   }
 
   return this.createDocumentTable(collection).then(() => this.saveDoc(collection, doc));
+};
+
+/**
+ * Save multiple documents.
+ *
+ * @param {String} collection - Document table name to save to. If it does not
+ * already exist, it will be created.
+ * @param {Object} docs - JSON documents.
+ * @return {Promise} The saved documents.
+ */
+Database.prototype.saveDocs = function (collection, docs) {
+  const potentialTable = extractTable(collection, this);
+  if (potentialTable) {
+    return potentialTable.saveDocs(docs);
+  }
+
+  return this.createDocumentTable(collection).then(() => this.saveDocs(collection, docs));
 };
 
 /**
@@ -679,13 +737,13 @@ exports = module.exports = Database;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_parseKey.html">util/parseKey</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Readable.html">Readable</a></li><li><a href="Select.html">Select</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Update.html">Update</a></li><li><a href="Writable.html">Writable</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li><li><a href="global.html#getDefaultSQLforUUID">getDefaultSQLforUUID</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_parseKey.html">util/parseKey</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Readable.html">Readable</a></li><li><a href="Select.html">Select</a></li><li><a href="Sequence.html">Sequence</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Update.html">Update</a></li><li><a href="Writable.html">Writable</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li><li><a href="global.html#getDefaultSQLforUUID">getDefaultSQLforUUID</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Jul 17 2018 11:54:34 GMT-0400 (EDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Feb 17 2019 20:02:52 GMT-0500 (Eastern Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

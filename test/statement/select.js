@@ -112,5 +112,152 @@ describe('Select', function () {
       const result = new Select(source, {}, {offset: 10, limit: 10});
       assert.equal(result.format(), 'SELECT * FROM testsource WHERE TRUE ORDER BY 1 OFFSET 10 LIMIT 10');
     });
+
+    describe('keyset pagination', function () {
+      it('tests the last values of the sort fields', function () {
+        const result = new Select(source, {}, {
+          pageLength: 10,
+          order: [{
+            field: 'col1',
+            last: 123
+          }, {
+            field: 'col2',
+            last: 456
+          }]
+        });
+
+        assert.equal(result.pageLength, 10);
+        assert.equal(result.pagination, '("col1","col2") > ($1,$2)');
+        assert.equal(result.where.conditions, 'TRUE');
+        assert.isEmpty(result.where.params);
+        assert.deepEqual(result.params, [123, 456]);
+        assert.equal(result.format(), 'SELECT * FROM testsource WHERE TRUE AND ("col1","col2") > ($1,$2) ORDER BY "col1" ASC,"col2" ASC FETCH FIRST 10 ROWS ONLY');
+      });
+
+      it('reverses direction depending on the first field', function () {
+        const result = new Select(source, {}, {
+          pageLength: 10,
+          order: [{
+            field: 'col1',
+            direction: 'desc',
+            last: 123
+          }, {
+            field: 'col2',
+            direction: 'asc',
+            last: 456
+          }]
+        });
+
+        assert.equal(result.pageLength, 10);
+        assert.equal(result.pagination, '("col1","col2") < ($1,$2)');
+        assert.equal(result.where.conditions, 'TRUE');
+        assert.isEmpty(result.where.params);
+        assert.deepEqual(result.params, [123, 456]);
+        assert.equal(result.format(), 'SELECT * FROM testsource WHERE TRUE AND ("col1","col2") < ($1,$2) ORDER BY "col1" DESC,"col2" ASC FETCH FIRST 10 ROWS ONLY');
+      });
+
+      it('starts from the beginning', function () {
+        const result = new Select(source, {}, {
+          pageLength: 10,
+          order: [{
+            field: 'col1'
+          }, {
+            field: 'col2'
+          }]
+        });
+
+        assert.equal(result.pageLength, 10);
+        assert.isUndefined(result.pagination);
+        assert.equal(result.where.conditions, 'TRUE');
+        assert.isEmpty(result.where.params);
+        assert.deepEqual(result.params, []);
+        assert.equal(result.format(), 'SELECT * FROM testsource WHERE TRUE ORDER BY "col1" ASC,"col2" ASC FETCH FIRST 10 ROWS ONLY');
+      });
+
+      it('works with pregenerated where specs', function () {
+        const result = new Select(source, {
+          conditions: 'col2 = $1',
+          params: [1]
+        }, {
+          pageLength: 10,
+          order: [{
+            field: 'col1',
+            last: 5
+          }]
+        });
+
+        assert.equal(result.where.conditions, 'col2 = $1');
+        assert.deepEqual(result.params, [1, 5]);
+        assert.equal(result.pagination, '("col1") > ($2)');
+        assert.equal(result.format(), 'SELECT * FROM testsource WHERE col2 = $1 AND ("col1") > ($2) ORDER BY "col1" ASC FETCH FIRST 10 ROWS ONLY');
+      });
+
+      it('applies body and type options', function () {
+        const result = new Select(source, {
+          col2: 'value2'
+        }, {
+          document: true,
+          pageLength: 10,
+          order: [{
+            field: 'col1',
+            type: 'int',
+            last: 5
+          }]
+        });
+
+        assert.equal(result.where.conditions, '"col2" = $1');
+        assert.deepEqual(result.params, ['value2', 5]);
+        assert.equal(result.pagination, '(("col1")::int) > ($2)');
+        assert.equal(result.format(), 'SELECT * FROM testsource WHERE "col2" = $1 AND (("col1")::int) > ($2) ORDER BY ("col1")::int ASC FETCH FIRST 10 ROWS ONLY');
+      });
+
+      it('requires an order definition', function (done) {
+        const result = new Select(source, {}, {pageLength: 10});
+
+        try {
+          result.format();
+        } catch (err) {
+          assert.equal(err.message, 'Keyset paging with pageLength requires options.order');
+
+          done();
+        }
+      });
+
+      it('does not work with offsets', function (done) {
+        const result = new Select(source, {}, {
+          pageLength: 10,
+          order: [{
+            field: 'col1'
+          }],
+          offset: 10
+        });
+
+        try {
+          result.format();
+        } catch (err) {
+          assert.equal(err.message, 'Keyset paging cannot be used with offset and limit');
+
+          done();
+        }
+      });
+
+      it('does not work with limits', function (done) {
+        const result = new Select(source, {}, {
+          pageLength: 10,
+          order: [{
+            field: 'col1'
+          }],
+          limit: 10
+        });
+
+        try {
+          result.format();
+        } catch (err) {
+          assert.equal(err.message, 'Keyset paging cannot be used with offset and limit');
+
+          done();
+        }
+      });
+    });
   });
 });
