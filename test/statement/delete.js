@@ -5,37 +5,24 @@ const Delete = require('../../lib/statement/delete');
 describe('Delete', function () {
   const source = {
     delimitedFullName: 'testsource',
-    pk: ['id'],
-    isPkSearch: () => false,
-    columns: ['field1', 'field2', 'string', 'boolean', 'int', 'number', 'object', 'array', 'emptyArray']
+    isPkSearch: () => false
   };
 
   describe('ctor', function () {
     it('should have defaults', function () {
       const query = new Delete(source);
 
-      assert.equal(query.source.delimitedFullName, 'testsource');
+      assert.equal(query.source, 'testsource');
       assert.equal(query.generator, 'tableGenerator');
       assert.isFalse(query.only);
       assert.isFalse(query.single);
     });
 
     it('should apply options', function () {
-      const query = new Delete(source, {}, {
-        build: true,
-        decompose: true,
-        document: true,
-        only: true,
-        single: true,
-        stream: true
-      });
+      const query = new Delete(source, {}, {build: true});
 
-      assert.equal(query.source.delimitedFullName, 'testsource');
+      assert.equal(query.source, 'testsource');
       assert.isTrue(query.build);
-      assert.isTrue(query.decompose);
-      assert.isTrue(query.document);
-      assert.isTrue(query.only);
-      assert.isTrue(query.stream);
     });
   });
 
@@ -54,7 +41,7 @@ describe('Delete', function () {
       const result = new Delete({
         delimitedFullName: 'testsource',
         isPkSearch: () => true,
-        pk: ['id']
+        pk: 'id'
       }, 1);
       assert.equal(result.format(), 'DELETE FROM testsource WHERE "id" = $1 RETURNING *');
     });

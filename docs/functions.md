@@ -4,17 +4,9 @@ Object-relational mappers tend to ignore functions. For many, the database exist
 
 To be fair, this setup is perfectly sufficient for many use cases. But when it isn't, it _hurts_. With functions, you can perform complex operations on your data at a scope and speed unrivaled by anything else. Why go to the trouble of querying bulk data into another system and manipulating it -- only to put it back where it was with a second trip across the wire? Especially when there's a powerful, flexible language purpose-built for set operations _right there_? You wouldn't work that way, and Massive won't make you: functions are first-class citizens as far as it's concerned.
 
-<!-- vim-markdown-toc GFM -->
-
-* [Database Functions](#database-functions)
-* [The Scripts Directory](#the-scripts-directory)
-* [Invocation](#invocation)
-
-<!-- vim-markdown-toc -->
-
 ## Database Functions
 
-All functions visible to the connecting role are attached to the Massive instance, unless the [loader configuration](connecting#loader-configuration-and-filtering) restricts function loading.
+All functions visible to the connecting role are attached to the Massive instance, unless the loader configuration restricts function loading. See the [Connecting](connecting) chapter for more information.
 
 ## The Scripts Directory
 
@@ -22,7 +14,7 @@ Massive doesn't stop at the functions present in the database itself: on startup
 
 By default, Massive searches the `/db` directory, but this can be customized by setting the `scripts` property in the loader configuration. The scripts directory can contain further subdirectories; like schemas, these are treated as namespaces. Unlike schemas, they can be nested to arbitrary depth.
 
-Like `db.query`, prepared statements in script files can use named parameters instead of `$1`-style indexed parameters. Named parameters are formatted `${name}`. Other delimiters besides braces are supported; consult the pg-promise documentation for a full accounting.
+Like `run`, prepared statements in script files can use named parameters instead of `$1`-style indexed parameters. Named parameters are formatted `${name}`. Other delimiters besides braces are supported; consult the pg-promise documentation for a full accounting.
 
 Prepared statement scripts must consist of one and only one SQL statement. Common table expressions or CTEs can take some of the sting out of this requirement, but if you need to execute multiple statements with arbitrary parameters it's time to turn it into a proper function.
 
@@ -31,8 +23,6 @@ Prepared statement scripts must consist of one and only one SQL statement. Commo
 Massive treats functions and scripts identically. Each is attached as a function which may be invoked directly. Parameters may be passed in one by one or as an array. Results are returned in the usual Massive style as an array of objects.
 
 If `enhancedFunctions` is set to `true` in the loader configuration, functions returning scalars or flat arrays will be intercepted and the results massaged into scalars or flat arrays, as appropriate. Since this represents a departure from the consistent form, it must be explicitly enabled on initialization.
-
-The last argument to Postgres functions may be declared a `VARIADIC` array, similar to JavaScript rest parameters: all extra values are rolled up into an array of the same type. Massive builds prepared statements at runtime for variadic functions, so your variadic arguments should be appended to any non-variadic arguments. **Don't enclose your variadic arguments in an array or Postgres will not be able to identify the function you mean to execute.**
 
 ```javascript
 db.uuid_generate_v1mc().then(arr => {

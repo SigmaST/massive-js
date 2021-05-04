@@ -7,7 +7,7 @@ describe('scripts', function () {
   let db;
 
   before(function* () {
-    db = yield resetDb('empty');
+    db = yield resetDb();
   });
 
   after(function () {

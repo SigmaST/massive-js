@@ -8,76 +8,31 @@ Options can be passed to most query and persistence functions as the final argum
 db.tests.find({
   is_active: true
 }, {
-  fields: ['name', 'started_at'],
-  exprs: {
-    lowername: 'lower(name)',
-    total: 'passes + failures'
-  },
   offset: 20,
   limit: 10,
   only: true,
   stream: true
 }).then(stream => {
-  // a stream returning the name, start date, lower-
-  // cased name, and pass + failure total for active
-  // tests 21-30, omitting rows from any descendant
-  // tables
+  // a stream returning the active tests 21-30,
+  // omitting rows from any descendant tables
 });
 ```
 
-<!-- vim-markdown-toc GFM -->
-
-* [Filtering and Shaping Results](#filtering-and-shaping-results)
-  * [Ordering Results](#ordering-results)
-* [Results Processing](#results-processing)
-* [Tasks and Transactions](#tasks-and-transactions)
-
-<!-- vim-markdown-toc -->
-
-## Filtering and Shaping Results
+## SQL Clauses
 
 Certain SQL clauses are used with different types of query. For example, a `LIMIT` clause can only be used with a function which emits a `SELECT` such as `find` or `count`.
 
-| Option key       | Use in            | Description |
-|------------------|-------------------|-------------|
-| fields           | `find*`, `search` | Specify an array of column names to include in the resultset. The names will be quoted; use `exprs` to invoke functions or operate on columns. |
-| exprs            | `find*`, `search` | Specify a map of aliases to expressions to include in the resultset. **Do not send user input directly into `exprs` unless you understand the risk of SQL injection!** |
-| limit            | `find*`, `search` | Set the number of rows to take. |
-| offset           | `find*`, `search` | Set the number of rows to skip. |
-| only             | any               | Set to `true` to restrict the query to the table specified, if any others inherit from it. |
-| order            | `find*`, `search` | An array of [order objects](#ordering-results). |
-| onConflictIgnore | `insert`          | If the inserted data would violate a unique constraint, do nothing. |
-| deepInsert       | `insert`          | Specify `true` to turn on [deep insert](persistence#deep-insert). |
-| body             | `updateDoc`       | Specify in order to override the default `body` field affected by `updateDoc`. |
+| Option key       | Use in | Description |
+|------------------|--------|-------------|
+| columns          | `SELECT` | Change the `SELECT` list by specifying an array of columns to include in the resultset. |
+| limit            | `SELECT` | Set the number of rows to take. |
+| offset           | `SELECT` | Set the number of rows to skip. |
+| only             | `SELECT`, `UPDATE`, `DELETE` | Set to `true` to restrict the query to the table specified, if any others inherit from it. |
+| order            | `SELECT` | An array of strings (`['column1', 'column2 DESC']`) which is processed into an `ORDER BY` clause. |
+| orderBody        | `SELECT` | If querying a document table, set to `true` to apply `options.order` to fields in the document body rather than the table. |
+| onConflictIgnore | `INSERT` | If the inserted data would violate a unique constraint, do nothing. |
 
-**nb. The `exprs` option and the corresponding `expr` key in order objects interpolate values into the emitted SQL. Take care with raw strings and ensure that user input is never directly passed in through the options, or you risk opening yourself up to SQL injection attacks.**
-
-### Ordering Results
-
-The `order` option sets an array of order objects which are used to build a SQL `ORDER BY` clause. An order object must contain a `field` or an `expr`; all other properties are optional.
-
-* `field`: The name of the column being sorted on. May be a JSON path if sorting by an element nested in a JSON field or document table body.
-* `expr`: A raw SQL expression. Will not be escaped or quoted and **is potentially vulnerable to SQL injection**.
-* `direction`: The sort direction, `ASC` or `DESC`.
-* `type`: Define a cast type for values. Useful with JSON fields.
-
-```javascript
-db.tests.find({
-  is_active: true
-}, {
-  order: [{
-    field: 'started_at',
-    direction: 'desc'
-  }, {
-    expr: 'passes + failures',
-    direction: 'asc'
-  }]
-}).then(stream => {
-  // all tests, ordered first by most recent start
-  // date, then by pass + failure total beginning
-  // with the lowest
-});
-```
+*nb. The `columns` and `order` properties allow comma-delimited string as well as array values. Take care when using raw strings since the values are interpolated directly into the emitted SQL. If user input is included in the values, you open yourself up to SQL injection attacks.*
 
 ## Results Processing
 
@@ -86,21 +41,69 @@ Results processing options are generally applicable to all query types, although
 | Option key | Description |
 |------------|-------------|
 | build      | Set to `true` to return the query text and parameters *without* executing anything. |
-| document   | Set to `true` to invoke [document table handling](documents). |
+| document   | Set to `true` to invoke [document table handling](/documents). |
 | single     | Set to `true` to return the first result as an object instead of a results array. |
 | stream     | Set to `true` to return results as a stream instead of an array. Streamed results cannot be `decompose`d. |
-| decompose  | Provide a schema to [transform the results into an object graph](decomposition). Not compatible with `stream`. |
+| decompose  | Provide a schema to transform the results into an object graph (see below). Not compatible with `stream`. |
 
-## Tasks and Transactions
+### Decomposition Schemas
 
-`db.withConnection` may take a single option:
+The `decompose` option takes a schema which represents the desired output structure. A schema is a JavaScript object with a few specific properties, and which may contain further schemas.
 
-| Option key | Description |
-|------------|-------------|
-| tag        | A tag which will be visible in [pg-monitor](index#monitoring-queries). |
+* `pk` (for "primary key") specifies the field in the resultset which uniquely identifies the entity represented by this schema.
+* `columns` is either a map of fields in the resultset (keys) to fields in the output entity (values), or an array of field names if they do not need to be transformed.
+* `array` is only usable on schemas nested at least one level deep. If `true`, the entities this schema represents are considered a collection instead of a nested object.
 
-`db.withTransaction` as well:
+Any other key on a schema is taken to represent a nested schema, and nested schemas **may not be named** with one of the reserved keys. The following schema:
 
-| Option key | Description |
-|------------|-------------|
-| mode       | A [TransactionMode](https://vitaly-t.github.io/pg-promise/txMode.TransactionMode.html) object defining a new isolation level, readonly mode, and/or deferrable mode. |
+```javascript
+db.user_tests.find({}, {
+  decompose: {
+    pk: 'user_id',
+    columns: ['user_id', 'username'],
+    tests: {
+      pk: 'test_id',
+      columns: {
+        test_id: 'id',
+        name: 'name'
+      },
+      array: true
+    }
+  }
+}).then(...)
+```
+
+will transform this recordset:
+
+```javascript
+[
+  {user_id: 1, username: 'alice', test_id: 1, name: 'first'},
+  {user_id: 1, username: 'alice', test_id: 2, name: 'second'},
+  {user_id: 2, username: 'bob', test_id: 3, name: 'third'},
+]
+```
+
+into this:
+
+```javascript
+[{
+  user_id: 1,
+  username: 'alice',
+  tests: [{
+    id: 1,
+    name: 'first'
+  }, {
+    id: 2,
+    name: 'second'
+  }]
+}, {
+  user_id: 2,
+  username: 'bob',
+  tests: [{
+    id: 3,
+    name: 'third'
+  }]
+}]
+```
+
+The `decompose` option can be applied to any result set, although it will generally be most useful with views and scripts.

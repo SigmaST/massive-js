@@ -7,7 +7,7 @@ describe('reload', function () {
     const initDb = yield resetDb('multi-schema');
 
     // reconnect with a pool size of 1 to make it easier to change runtime settings on all connections
-    db = yield massive({user: 'postgres', database: 'massive', poolSize: 1}, massive.loader);
+    db = yield massive({database: 'massive', poolSize: 1}, massive.loader);
 
     // close original connection
     yield initDb.instance.$pool.end();
@@ -20,7 +20,7 @@ describe('reload', function () {
   });
 
   it('picks up change in current schema', () => {
-    return db.query('SET search_path=test')
+    return db.run('SET search_path=test')
       .then(() => db.reload())
       .then(() => assert.equal(db.currentSchema, 'test'));
   });

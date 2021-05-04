@@ -1,41 +1,26 @@
 # Criteria Objects
 
-Many Massive functions use criteria objects to build `WHERE` clauses. Although they are principally used in query functions, there are other uses for them. In particular, bulk updates use criteria objects to filter the records being modified.
+Many Massive functions use criteria objects to build `WHERE` clauses. Although they are principally used in query functions, there are other uses for them. In particular, bulk updates use criteria objects to filter data being modified.
 
-A criteria object is a "plain old JavaScript object" where keys represent the fields to search and values are prepared statement parameters. The key `or` is special and takes an array of nested criteria objects, at least one of which must be fully matched for a record to be included in the resultset. `or` may be nested recursively at any depth.
+A criteria object is a "plain old JavaScript object" where keys represent the fields to search and values are prepared statement parameters.
 
 ```javascript
 // this will search for all active records where the name
-// contains 'homepage' or the JSON 'stats' field shows
+// contains 'homepage' and the JSON 'stats' field shows
 // more than 5 runs
 
 const criteria = {
   is_active: true,
-  or: [{
-    'name like': '%homepage%'
-  }, {
-    'stats.runs >': 5
-  }]
+  'name like': '%homepage%',
+  'stats.runs >': 5
 };
 ```
-
-<!-- vim-markdown-toc GFM -->
-
-* [Operations](#operations)
-  * [Scalar Comparison](#scalar-comparison)
-  * [Arrays](#arrays)
-  * [Pattern Matching](#pattern-matching)
-  * [Regular Expressions](#regular-expressions)
-* [Casting](#casting)
-* [JSON Traversal](#json-traversal)
-
-<!-- vim-markdown-toc -->
 
 ## Operations
 
 Keys in a criteria object may contain an operator which is converted to a SQL operator in the `WHERE` clause. **If no operator is provided, the predicate will test for equality.**
 
-Text operator keys are case-insensitive.
+Text operators are case-insensitive.
 
 ### Scalar Comparison
 
@@ -47,7 +32,6 @@ Text operator keys are case-insensitive.
 | `<=` | `<=` | Less than or equal |
 | `>` | `>` | Greater than |
 | `>=` | `>=` | Greater than or equal |
-| nothing or `=` | `IN` | Test whether value is in an array of scalar expressions |
 | `BETWEEN` | `BETWEEN` | Test whether value is between the `[lower, upper]` bounds of a 2-element array |
 | `IS` | `IS` | Explicit equality test for `NULL` and boolean values |
 | `IS NOT` | `IS NOT` | Explicit inequality test for `NULL` and boolean values |

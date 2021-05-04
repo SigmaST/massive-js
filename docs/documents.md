@@ -6,42 +6,13 @@ PostgreSQL's JSONB functionality allows us to blend relational and document appr
 
 The JSONB type is a great solution to this problem, and Massive takes care of the management overhead with a document table API.
 
-<!-- vim-markdown-toc GFM -->
-
-* [Document Tables](#document-tables)
-  * [db.saveDoc](#dbsavedoc)
-* [Querying Documents](#querying-documents)
-  * [A Note About Criteria](#a-note-about-criteria)
-  * [countDoc](#countdoc)
-  * [findDoc](#finddoc)
-  * [searchDoc](#searchdoc)
-* [Persisting Documents](#persisting-documents)
-  * [saveDoc](#savedoc)
-  * [updateDoc](#updatedoc)
-
-<!-- vim-markdown-toc -->
-
 ## Document Tables
 
 Document tables exist for the sole purpose of storing JSONB data. Query them through Massive's API, and you get a JSON document which you can modify and persist, all seamlessly. You don't even need to create them ahead of time until you know you need them.
 
-Standard table functions still work on document tables, and can be quite useful especially for extended document tables! Fields in the document can be searched with regular `find` and criteria object fields using JSON traversal to look for `body.myField.anArray[1].aField`.
+Document tables may be extended with new columns and foreign keys. The `id` type can be changed as well (so long as a default is set such as `uuid_generate_v1mc()` for UUID types) without impeding usage of document table functions. Just don't _remove_ any columns or change their names, since Massive depends on those.
 
-`findDoc` **is still preferred** to JSON queries if at all possible since it uses the `@>` "contains" operator to leverage indexing on the document body to improve performance.
-
-### Primary key default data type
-
-The default primary key data type used for all tables including document tables is 'serial', which by default begins at 1 for the first record created and for every new record increments by 1. However, it is possible to change the primary key data type used for new document tables to 'uuid' (Universal Unique Identifier).
-
-A UUID is a string of 32 hexadecimal digits, in five character groups, separated by hyphens and are generally used in a concurrent or distributed environment.
-
-It is also possible to change the default mechanism used to generate UUIDs, between several standard algorithms, from `uuid_generate_v4()` to `uuid_generate_v1()`, `uuid_generate_v1mc()`, `uuid_generate_v3()` or `uuid_generate_v5()`.
-
-Note: The connected database requires the extension 'uuid-ossp', in order to support the 'uuid' primary key data type.
-
-Please see [loader configuration and filtering](connecting#loader-configuration-and-filtering) for help setting these options.
-
-Document tables may be extended with new columns and foreign keys. The `id` type can be changed as well (so long as a default is set such as `uuid_generate_v1mc()` or `uuid_generate_v4()` etc. for UUID types) without impeding usage of document table functions. Just don't _remove_ any columns or change their names, since Massive depends on those.
+Standard table functions still work on document tables, and can be quite useful especially for extended document tables! Fields in the document can be searched with regular `find` and criteria object fields using JSON traversal to look for `body.myField.anArray[1].aField`. `findDoc` **is still preferred** to JSON queries if at all possible since it uses the `@>` "contains" operator to leverage indexing on the document body to improve performance.
 
 ### db.saveDoc
 
@@ -66,43 +37,6 @@ db.saveDoc('reports', {
 If the table already exists, you can still use `db.saveDoc`, but you can also invoke `saveDoc` on the table itself.
 
 ## Querying Documents
-
-### A Note About Criteria
-
-Document criteria can be a little more complex to work with. When possible, Massive tries to use a "contains" (`@>`) operator in order to leverage the index on the document body. Example criteria objects are below.
-
-```javascript
-// A criteria object testing top-level keys uses the index
-db.docs.findDoc({
-  field1: 'value',
-  'field2 !=': value
-});
-
-// Matching nested values exactly also uses the index, although
-// combining multiple top-level conditions like this is less
-// efficient. Note that operations cannot be used with the
-// inner values -- only equality!
-db.docs.findDoc({
-  objectfield: {
-    innervalue: 123
-  },
-  arrayfield: [
-    {'return': 'all docs where arrayfield contains this pair'}
-  ]
-});
-
-// Testing values with IN does _not_ use the index
-db.docs.findDoc({
-  'field1 IN': [1, 2, 3]
-});
-
-// Traversal for operations does _not_ use the index
-db.docs.findDoc({
-  'outer.inner <>': 'nested value'
-});
-```
-
-Be careful with criteria which cannot use the index since they may result in poorly-performing queries with sufficiently large tables.
 
 ### countDoc
 
@@ -134,7 +68,7 @@ db.reports.findDoc({
 
 ### searchDoc
 
-`searchDoc` performs a full-text search on the document body. You can specify fields, or omit in order to use the stored search vector to search the entire document.
+`searchDoc` performs a full-text search on the document body fields.
 
 ```javascript
 db.reports.searchDoc({
@@ -150,11 +84,7 @@ db.reports.searchDoc({
 
 ### saveDoc
 
-`saveDoc` inserts or updates a document, like `save` inserts or updates records in ordinary tables. If an `id` field is present in the document you pass, the corresponding record will be updated; otherwise, it's inserted.
-
-There is one important distinction in how the two methods operate: `saveDoc` **overwrites the entire document** on updates! If you pass an incomplete document in, that's what gets persisted -- fields you don't specify will be gone. To modify documents without overwriting non-specified fields, see `updateDoc`.
-
-`saveDoc` returns a promise for the updated document.
+`saveDoc` inserts or updates a document. If an `id` field is present in the document, the corresponding record will be updated; otherwise, it's inserted. `saveDoc` will replace the entire document and does not update individual fields; to do that, see `modify`.
 
 ```javascript
 db.reports.saveDoc({
@@ -171,30 +101,28 @@ db.reports.saveDoc({
 });
 ```
 
-### updateDoc
+### modify
 
-`updateDoc` adds and updates fields in an existing document or documents _without_ replacing the entire body. Fields not defined in the `changes` object are not modified. `updateDoc` requires an ID or criteria object and a changes object, with optional options.
+`modify` adds and updates fields in an existing document or documents _without_ replacing the entire body. Fields not defined in the `changes` object are not modified. `modify` takes an ID or criteria object, a changes object, and an optional name for the JSON or JSONB column.
 
-`updateDoc` may be used to alter values in any JSON or JSONB column, not just with document tables. However, if the JSON column name is overridden by passing `options.body`, there is an important change in behavior. Criteria are normally applied against the document body as with other document methods; however, when a new `body` is specified, criteria will be tested against the row as with other _table_ methods. Likewise, the promise returned will be for the updated document with a document table, or for the entire row when `updateDoc` is invoked against another table.
+This function may be used with any JSON or JSONB column, not just with document tables, but the behavior is slightly different. With document tables, criteria objects will be tested against the document body; with other tables, they will be tested against the row. Likewise, the promise returned will be for the updated document with a document table, or for the entire row with another table.
 
 ```javascript
-db.reports.updateDoc(1, {
+db.reports.modify(1, {
   title: 'Week 11 Throughput'
 }).then(report => {
   // the updated report, with a changed 'title' attribute
 });
 
-db.products.updateDoc({
+db.products.modify({
   type: 'widget'
 }, {
   colors: ['gray', 'purple', 'red']
-}, {
-  body: 'info'
-}).then(widgets => {
-  // an array of widgets, now in at least three colors; since
-  // products is not a document table (note the 'info' field
-  // was specified to update), the 'type' is tested against a
-  // column named type rather than a key in the info JSON or
-  // JSONB column.
+}, 'info').then(widgets => {
+  // an array of widgets, now in at least three colors.
+  // since products is not a document table (note the
+  // 'info' field was specified to update), the 'type'
+  // is tested against a column named type rather than
+  // a key in the info JSON or JSONB column.
 });
 ```

@@ -200,54 +200,6 @@ table, view, and function visible to the connection's user.
 
         <tr>
             
-                <td class="name"><code>documentPkType</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Override default data type (serial),
- set for DocumentTable primary key 'id', e.g. 'uuid'</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>uuidVersion</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">If documentPkType is set to 'uuid', set which UUID version to use,
- e.g. 'uuid_generate_v1', 'uuid_generate_v4', etc. Default is 'uuid_generate_v4'</td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>allowedSchemas</code></td>
             
 
@@ -404,29 +356,6 @@ table, view, and function visible to the connection's user.
 
         <tr>
             
-                <td class="name"><code>enhancedFunctions</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Boolean</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Streamline function return values.</td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>excludeFunctions</code></td>
             
 
@@ -450,7 +379,7 @@ table, view, and function visible to the connection's user.
 
         <tr>
             
-                <td class="name"><code>excludeMatViews</code></td>
+                <td class="name"><code>enhancedFunctions</code></td>
             
 
             <td class="type">
@@ -466,7 +395,7 @@ table, view, and function visible to the connection's user.
 
             
 
-            <td class="description last">Ignore materialized views.</td>
+            <td class="description last">Streamline function return values.</td>
         </tr>
 
     
@@ -547,7 +476,7 @@ table, view, and function visible to the connection's user.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line19">line 19</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line15">line 15</a>
     </li></ul></dd>
     
 
@@ -601,7 +530,7 @@ table, view, and function visible to the connection's user.
     
 
     
-    <h4 class="name" id="attach"><span class="type-signature"></span>attach<span class="signature">(entities)</span><span class="type-signature"> &rarr; {Array}</span></h4>
+    <h4 class="name" id="attach"><span class="type-signature"></span>attach<span class="signature">(ctor, sources)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
     
 
     
@@ -609,7 +538,13 @@ table, view, and function visible to the connection's user.
 
 
 <div class="description">
-    Attach an entity to the connected instance.
+    Discover objects in the database and attach them for usage.
+
+Tables and Views are attached to the Database directly, while an invocation
+function is attached for Executables.
+
+References to attached objects are also stored in the tables, views, and
+functions arrays.
 </div>
 
 
@@ -645,16 +580,39 @@ table, view, and function visible to the connection's user.
 
         <tr>
             
-                <td class="name"><code>entities</code></td>
+                <td class="name"><code>ctor</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Constructor for the object instances.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>sources</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Promise</span>
 |
 
-<span class="param-type">Array</span>
+<span class="param-type">function</span>
 
 
             
@@ -664,8 +622,8 @@ table, view, and function visible to the connection's user.
 
             
 
-            <td class="description last">New Entity or list of Entities to add to the
-instance.</td>
+            <td class="description last">Something which resolves to a list of entity
+specifications.</td>
         </tr>
 
     
@@ -706,7 +664,7 @@ instance.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line78">line 78</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line76">line 76</a>
     </li></ul></dd>
     
 
@@ -733,7 +691,7 @@ instance.</td>
 
         
 <div class="param-desc">
-    All added entities.
+    The collection of objects just attached.
 </div>
 
 
@@ -744,252 +702,7 @@ instance.</td>
     </dt>
     <dd>
         
-<span class="param-type">Array</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="clean"><span class="type-signature"></span>clean<span class="signature">()</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Remove all attached entities from the instance, returning it to the pre-
-introspection state.
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line181">line 181</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="clone"><span class="type-signature"></span>clone<span class="signature">(conn)</span><span class="type-signature"> &rarr; {<a href="Database.html">Database</a>}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Clones the database handle for a task or transaction, replacing the internal
-instance with a dedicated connection.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>conn</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">A pg-promise task or transaction object.</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line443">line 443</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    A cloned database object.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type"><a href="Database.html">Database</a></span>
+<span class="param-type">Promise</span>
 
 
     </dd>
@@ -1109,7 +822,7 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line558">line 558</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line266">line 266</a>
     </li></ul></dd>
     
 
@@ -1137,163 +850,6 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
         
 <div class="param-desc">
     The added table.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="createExtension"><span class="type-signature"></span>createExtension<span class="signature">(extensionName)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Create an extension.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>extensionName</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">A valid extension name. Example 'uuid-ossp'</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line478">line 478</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    A promise which resolves when the extension has been created.
 </div>
 
 
@@ -1423,7 +979,7 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line611">line 611</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line326">line 326</a>
     </li></ul></dd>
     
 
@@ -1479,7 +1035,7 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
     
 
     
-    <h4 class="name" id="detach"><span class="type-signature"></span>detach<span class="signature">(entityPath)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="detach"><span class="type-signature"></span>detach<span class="signature">(entity, collection<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
     
 
     
@@ -1511,6 +1067,8 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
         <th>Type</th>
 
         
+        <th>Attributes</th>
+        
 
         
 
@@ -1523,7 +1081,7 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
 
         <tr>
             
-                <td class="name"><code>entityPath</code></td>
+                <td class="name"><code>entity</code></td>
             
 
             <td class="type">
@@ -1536,10 +1094,52 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last">Path to the entity.</td>
+            <td class="description last">Fully-qualified name of the entity.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>collection</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Name of the collection to which the entity
+belongs.</td>
         </tr>
 
     
@@ -1580,7 +1180,7 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line171">line 171</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line112">line 112</a>
     </li></ul></dd>
     
 
@@ -1603,163 +1203,6 @@ specified in a qualified path, current schema (usually 'public') is assumed.</td
 
 
 
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="dropExtension"><span class="type-signature"></span>dropExtension<span class="signature">(extensionName)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Drop an extension.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>extensionName</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">A valid extension name. Example 'uuid-ossp'</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line488">line 488</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    A promise which resolves when the extension has been droped.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
-
-
-    </dd>
-</dl>
-
-    
 
 
 
@@ -1945,7 +1388,7 @@ the schema.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line628">line 628</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line343">line 343</a>
     </li></ul></dd>
     
 
@@ -2002,7 +1445,7 @@ objects have been removed.
     
 
     
-    <h4 class="name" id="dropTable"><span class="type-signature"></span>dropTable<span class="signature">(tablePath, options)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    <h4 class="name" id="dropTable"><span class="type-signature"></span>dropTable<span class="signature">(table, options)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
     
 
     
@@ -2046,7 +1489,7 @@ objects have been removed.
 
         <tr>
             
-                <td class="name"><code>tablePath</code></td>
+                <td class="name"><code>table</code></td>
             
 
             <td class="type">
@@ -2062,8 +1505,7 @@ objects have been removed.
 
             
 
-            <td class="description last">Path to the table (including schema, if not
-public).</td>
+            <td class="description last">Name of the table to drop.</td>
         </tr>
 
     
@@ -2177,7 +1619,7 @@ the table.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line596">line 596</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line311">line 311</a>
     </li></ul></dd>
     
 
@@ -2233,7 +1675,7 @@ the table.</td>
     
 
     
-    <h4 class="name" id="listFunctions"><span class="type-signature"></span>listFunctions<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
+    <h4 class="name" id="getObject"><span class="type-signature"></span>getObject<span class="signature">(location, collection<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Object}</span></h4>
     
 
     
@@ -2241,7 +1683,7 @@ the table.</td>
 
 
 <div class="description">
-    List all the functions and scripts attached to the connected instance.
+    Find a database object, if attached.
 </div>
 
 
@@ -2252,220 +1694,110 @@ the table.</td>
 
 
 
-
-
-
-
-<dl class="details">
-
+    <h5>Parameters:</h5>
     
 
-    
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
 
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line303">line 303</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
+        <th>Type</th>
 
         
-<div class="param-desc">
-    A list of function paths.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
+        <th>Attributes</th>
         
-<span class="param-type">Array</span>
 
+        
+        <th>Default</th>
+        
 
-    </dd>
-</dl>
+        <th class="last">Description</th>
+    </tr>
+    </thead>
 
+    <tbody>
     
 
-
-
-
-
-        
+        <tr>
+            
+                <td class="name"><code>location</code></td>
             
 
-    
-
-    
-    <h4 class="name" id="listTables"><span class="type-signature"></span>listTables<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
-    
-
-    
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
 
 
+            
+            </td>
 
-<div class="description">
-    List all the tables attached to the connected instance.
-</div>
+            
+                <td class="attributes">
+                
 
+                
 
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line273">line 273</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    A list of table paths.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Array</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
+                
+                </td>
             
 
-    
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last">Name of the object to find. Unless the schema is
+specified in a qualified path, current schema (usually 'public') is assumed.</td>
+        </tr>
 
     
-    <h4 class="name" id="listViews"><span class="type-signature"></span>listViews<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
-    
+
+        <tr>
+            
+                <td class="name"><code>collection</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    tables
+                
+                </td>
+            
+
+            <td class="description last">Collection to search: tables, views, or
+functions.</td>
+        </tr>
 
     
-
-
-
-<div class="description">
-    List all the views attached to the connected instance.
-</div>
-
-
-
-
-
-
-
+    </tbody>
+</table>
 
 
 
@@ -2501,7 +1833,7 @@ the table.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line288">line 288</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line294">line 294</a>
     </li></ul></dd>
     
 
@@ -2528,7 +1860,7 @@ the table.</td>
 
         
 <div class="param-desc">
-    A list of view paths.
+    The table, if found.
 </div>
 
 
@@ -2539,7 +1871,7 @@ the table.</td>
     </dt>
     <dd>
         
-<span class="param-type">Array</span>
+<span class="param-type">Object</span>
 
 
     </dd>
@@ -2847,7 +2179,7 @@ resultset.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line330">line 330</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line199">line 199</a>
     </li></ul></dd>
     
 
@@ -2957,7 +2289,7 @@ cleared and new objects and files added.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line200">line 200</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line139">line 139</a>
     </li></ul></dd>
     
 
@@ -3138,7 +2470,7 @@ already exist, it will be created.</td>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line500">line 500</a>
+        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line249">line 249</a>
     </li></ul></dd>
     
 
@@ -3189,534 +2521,6 @@ already exist, it will be created.</td>
 
 
         
-            
-
-    
-
-    
-    <h4 class="name" id="withConnection"><span class="type-signature"></span>withConnection<span class="signature">(callback, options<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Begin a task, returning a copy of the connected instance which will route all
-queries made in the callback through the task scope.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-        <th>Attributes</th>
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>callback</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">A callback containing Massive API calls and SQL
-queries to be made within the task scope.</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>options</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Task options.
-                <h6>Properties</h6>
-                
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-        <th>Attributes</th>
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>tag</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">A tag for tracking the task's queries.</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-            </td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line409">line 409</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    A promise for the completed task, which will be fulfilled
-if it succeeds and commits or rejected if it rolls back.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="withTransaction"><span class="type-signature"></span>withTransaction<span class="signature">(callback, options<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Begin a transaction, returning a copy of the connected instance which will
-route all queries made in the callback through the transaction scope.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-        <th>Attributes</th>
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>callback</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">A callback containing Massive API calls and SQL
-queries to be made within the transaction scope.</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>options</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Transaction options.
-                <h6>Properties</h6>
-                
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-        <th>Attributes</th>
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>mode</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">TransactionMode</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">A pg-promise TransactionMode.</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-            </td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib_database.js.html">lib/database.js</a>, <a href="lib_database.js.html#line428">line 428</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    A promise for the completed transaction, which will be
-fulfilled if it succeeds and commits or rejected if it rolls back.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
     
 
     
@@ -3732,13 +2536,13 @@ fulfilled if it succeeds and commits or rejected if it rolls back.
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_parseKey.html">util/parseKey</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Readable.html">Readable</a></li><li><a href="Select.html">Select</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Update.html">Update</a></li><li><a href="Writable.html">Writable</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li><li><a href="global.html#getDefaultSQLforUUID">getDefaultSQLforUUID</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-massive.html">massive</a></li><li><a href="module-mutators.html">mutators</a></li><li><a href="module-operations.html">operations</a></li><li><a href="module-util_decompose.html">util/decompose</a></li><li><a href="module-util_docify.html">util/docify</a></li><li><a href="module-util_getFilterString.html">util/getFilterString</a></li><li><a href="module-util_prepareParams.html">util/prepareParams</a></li><li><a href="module-where.html">where</a></li></ul><h3>Classes</h3><ul><li><a href="Database.html">Database</a></li><li><a href="Delete.html">Delete</a></li><li><a href="Entity.html">Entity</a></li><li><a href="Executable.html">Executable</a></li><li><a href="Insert.html">Insert</a></li><li><a href="Queryable.html">Queryable</a></li><li><a href="Select.html">Select</a></li><li><a href="SingleValueStream.html">SingleValueStream</a></li><li><a href="Table.html">Table</a></li><li><a href="Update.html">Update</a></li></ul><h3>Global</h3><ul><li><a href="global.html"></a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Jul 17 2018 11:54:34 GMT-0400 (EDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 19 2017 22:38:47 GMT-0400 (EDT)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -1,28 +1,14 @@
 'use strict';
 
-const Executable = require('../lib/executable');
-const Readable = require('../lib/readable');
-const Writable = require('../lib/writable');
-
 describe('connecting', function () {
   let loader;
 
   before(function () {
-    // override the default PG env vars for testing since empty user information
-    // will default to the current username otherwise
-    process.env.PGUSER = 'postgres';
-    process.env.PGDATABASE = 'massive';
-
     return resetDb('loader').then(db => {
       loader = db.loader;
 
       return db.instance.$pool.end();
     });
-  });
-
-  after(function () {
-    delete process.env.PGUSER;
-    delete process.env.PGDATABASE;
   });
 
   it('exposes the Database class from the module', function () {
@@ -32,10 +18,10 @@ describe('connecting', function () {
   it('returns a database connection', function () {
     return massive({connectionString}, loader).then(db => {
       assert.isOk(db);
+      assert.isOk(db.tables);
+      assert.isOk(db.functions);
       assert.isOk(db.loader);
       assert.isOk(db.driverConfig);
-      assert.isTrue(db.objects.length > 0);
-      assert.isOk(db.t1);
 
       return db.instance.$pool.end();
     });
@@ -110,8 +96,8 @@ describe('connecting', function () {
       delete testLoader.scripts;
 
       return massive(connectionString, testLoader).then(db => {
-        assert.lengthOf(db.objects.filter(f => f instanceof Executable), 4);
-        assert.lengthOf(db.objects.filter(f => f.sql instanceof pgp.QueryFile), 0);
+        assert.lengthOf(db.functions, 4);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 0);
 
         return db.instance.$pool.end();
       });
@@ -143,13 +129,7 @@ describe('connecting', function () {
 
     it('loads all tables', function () {
       return massive({connectionString}, loader).then(db => {
-        assert.instanceOf(db.t1, Writable);
-        assert.instanceOf(db.t2, Writable);
-        assert.instanceOf(db.t3, Writable);
-        assert.instanceOf(db.tA, Writable);
-        assert.instanceOf(db.one.t1, Writable);
-        assert.instanceOf(db.one.t2, Writable);
-        assert.instanceOf(db.two.t1, Writable);
+        assert.equal(db.tables.length, 6);
 
         return db.instance.$pool.end();
       });
@@ -157,12 +137,7 @@ describe('connecting', function () {
 
     it('loads all views', function () {
       return massive({connectionString}, loader).then(db => {
-        assert.instanceOf(db.v1, Readable);
-        assert.instanceOf(db.v2, Readable);
-        assert.instanceOf(db.mv1, Readable);
-        assert.instanceOf(db.mv2, Readable);
-        assert.instanceOf(db.one.v1, Readable);
-        assert.instanceOf(db.one.v2, Readable);
+        assert.equal(db.views.length, 6);
 
         return db.instance.$pool.end();
       });
@@ -175,8 +150,8 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isTrue(db.objects.filter(o => o instanceof Executable).length > 1);
-        assert.lengthOf(db.objects.filter(f => f.sql instanceof pgp.QueryFile), 1); // just the schema script
+        assert.ok(db.functions.length > 1);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1); // just the schema script
 
         return db.instance.$pool.end();
       });
@@ -190,68 +165,24 @@ describe('connecting', function () {
 
       return massive(connectionString, testLoader).then(db => {
         assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isOk(db.two);
-
-        assert.instanceOf(db.t1, Writable);
-        assert.instanceOf(db.t2, Writable);
-        assert.instanceOf(db.t3, Writable);
-        assert.instanceOf(db.tA, Writable);
-        assert.instanceOf(db.one.t1, Writable);
-        assert.instanceOf(db.one.t2, Writable);
-        assert.instanceOf(db.two.t1, Writable);
-
-        assert.instanceOf(db.v1, Readable);
-        assert.instanceOf(db.v2, Readable);
-        assert.instanceOf(db.mv1, Readable);
-        assert.instanceOf(db.mv2, Readable);
-        assert.instanceOf(db.one.v1, Readable);
-        assert.instanceOf(db.one.v2, Readable);
-
-        assert.isFunction(db.f1, Executable);
-        assert.isFunction(db.f2, Executable);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+        assert(!!db.t1 && !!db.t2 && !!db.tA);
+        assert(!!db.v1 && !!db.v2);
+        assert(!!db.mv1 && !!db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !!db.one.t1 && !!db.one.t2 && !!db.one.v1 && !!db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!!db.two && !!db.two.t1);
+        assert.lengthOf(db.tables, 6);
+        assert.lengthOf(db.views, 6);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
     });
 
-    it('excludes materialized views', function () {
-      const testLoader = _.defaults({
-        scripts: `${__dirname}/helpers/scripts/loader`,
-        noWarnings: true,
-        excludeMatViews: true
-      }, loader);
-
-      return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isOk(db.two);
-
-        assert.instanceOf(db.t1, Writable);
-        assert.instanceOf(db.t2, Writable);
-        assert.instanceOf(db.t3, Writable);
-        assert.instanceOf(db.tA, Writable);
-        assert.instanceOf(db.one.t1, Writable);
-        assert.instanceOf(db.one.t2, Writable);
-        assert.instanceOf(db.two.t1, Writable);
-
-        assert.instanceOf(db.v1, Readable);
-        assert.instanceOf(db.v2, Readable);
-        assert.isUndefined(db.mv1);
-        assert.isUndefined(db.mv2);
-        assert.instanceOf(db.one.v1, Readable);
-        assert.instanceOf(db.one.v2, Readable);
-
-        assert.isFunction(db.f1, Executable);
-        assert.isFunction(db.f2, Executable);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+    it('does not load tables without primary keys', function () {
+      return massive(connectionString, loader).then(db => {
+        assert(!db.t3); // tables without primary keys aren't loaded
 
         return db.instance.$pool.end();
       });
@@ -267,31 +198,17 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isOk(db.two);
-
-        assert.isUndefined(db.t1);
-        assert.isUndefined(db.t2);
-        assert.isUndefined(db.t3);
-        assert.isUndefined(db.tA);
-        assert.instanceOf(db.one.t1, Writable);
-        assert.instanceOf(db.one.t2, Writable);
-        assert.instanceOf(db.two.t1, Writable);
-
-        assert.isUndefined(db.v1);
-        assert.isUndefined(db.v2);
-        assert.isUndefined(db.mv1);
-        assert.isUndefined(db.mv2);
-        assert.instanceOf(db.one.v1, Readable);
-        assert.instanceOf(db.one.v2, Readable);
-
-        assert.isUndefined(db.f1);
-        assert.isUndefined(db.f2);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+        assert(db);
+        assert(!db.t1 && !db.t2 && !db.tA);
+        assert(!db.v1 && !db.v2);
+        assert(!db.mv1 && !db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !!db.one.t1 && !!db.one.t2 && !!db.one.v1 && !!db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!!db.two && !!db.two.t1);
+        assert.equal(db.tables.length, 3);
+        assert.equal(db.views.length, 2);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -306,31 +223,17 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isOk(db.two);
-
-        assert.instanceOf(db.t1, Writable);
-        assert.isUndefined(db.t2);
-        assert.isUndefined(db.t3);
-        assert.isUndefined(db.tA);
-        assert.isUndefined(db.one.t1);
-        assert.isUndefined(db.one.t2);
-        assert.instanceOf(db.two.t1, Writable);
-
-        assert.instanceOf(db.v1, Readable);
-        assert.isUndefined(db.v2);
-        assert.isUndefined(db.mv1);
-        assert.isUndefined(db.mv2);
-        assert.isUndefined(db.one.v1);
-        assert.instanceOf(db.one.v2, Readable);
-
-        assert.isUndefined(db.f1);
-        assert.isUndefined(db.f2);
-        assert.isUndefined(db.one.f1);
-        assert.isUndefined(db.one.f2);
-
-        assert.isFunction(db.schema, Executable);
+        assert(db);
+        assert(!!db.t1 && !db.t2 && !db.tA);
+        assert(!!db.v1 && !db.v2);
+        assert(!db.mv1 && !db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !db.one.t1 && !db.one.t2 && !db.one.v1 && !!db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!!db.two && !!db.two.t1);
+        assert.equal(db.tables.length, 2);
+        assert.equal(db.views.length, 2);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -346,30 +249,17 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isUndefined(db.two);
-
-        assert.isUndefined(db.t1);
-        assert.instanceOf(db.t2, Writable);
-        assert.instanceOf(db.t3, Writable);
-        assert.instanceOf(db.tA, Writable);
-        assert.isUndefined(db.one.t1);
-        assert.isUndefined(db.one.t2);
-
-        assert.isUndefined(db.v1);
-        assert.instanceOf(db.v2, Readable);
-        assert.isUndefined(db.mv1);
-        assert.instanceOf(db.mv2, Readable);
-        assert.isUndefined(db.one.v1);
-        assert.isUndefined(db.one.v2);
-
-        assert.isFunction(db.f1, Executable);
-        assert.isFunction(db.f2, Executable);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+        assert(db);
+        assert(!db.t1 && !!db.t2 && !!db.tA);
+        assert(!db.v1 && !!db.v2);
+        assert(!db.mv1 && !!db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !db.one.t1 && !db.one.t2 && !db.one.v1 && !db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!db.two);
+        assert.equal(db.tables.length, 2);
+        assert.equal(db.views.length, 2);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -383,31 +273,17 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isOk(db.two);
-
-        assert.instanceOf(db.t1, Writable);
-        assert.instanceOf(db.t2, Writable);
-        assert.instanceOf(db.t3, Writable);
-        assert.instanceOf(db.tA, Writable);
-        assert.isUndefined(db.one.t1);
-        assert.instanceOf(db.one.t2, Writable);
-        assert.instanceOf(db.two.t1, Writable);
-
-        assert.instanceOf(db.v1, Readable);
-        assert.instanceOf(db.v2, Readable);
-        assert.instanceOf(db.mv1, Readable);
-        assert.instanceOf(db.mv2, Readable);
-        assert.isUndefined(db.one.v1);
-        assert.instanceOf(db.one.v2, Readable);
-
-        assert.isFunction(db.f1, Executable);
-        assert.isFunction(db.f2, Executable);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+        assert(db);
+        assert(!!db.t1 && !!db.t2 && !!db.tA);
+        assert(!!db.v1 && !!db.v2);
+        assert(!!db.mv1 && !!db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !db.one.t1 && !!db.one.t2 && !db.one.v1 && !!db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!!db.two && !!db.two.t1);
+        assert.equal(db.tables.length, 5);
+        assert.equal(db.views.length, 5);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -422,30 +298,17 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isUndefined(db.two);
-
-        assert.isUndefined(db.t1);
-        assert.instanceOf(db.t2, Writable);
-        assert.instanceOf(db.t3, Writable);
-        assert.instanceOf(db.tA, Writable);
-        assert.instanceOf(db.one.t1, Writable);
-        assert.instanceOf(db.one.t2, Writable);
-
-        assert.isUndefined(db.v1);
-        assert.instanceOf(db.v2, Readable);
-        assert.isUndefined(db.mv1);
-        assert.instanceOf(db.mv2, Readable);
-        assert.instanceOf(db.one.v1, Readable);
-        assert.instanceOf(db.one.v2, Readable);
-
-        assert.isFunction(db.f1, Executable);
-        assert.isFunction(db.f2, Executable);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+        assert(db);
+        assert(!db.t1 && !!db.t2 && !!db.tA);
+        assert(!db.v1 && !!db.v2);
+        assert(!db.mv1 && !!db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !!db.one.t1 && !!db.one.t2 && !!db.one.v1 && !!db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!db.two);
+        assert.equal(db.tables.length, 4);
+        assert.equal(db.views.length, 4);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -461,30 +324,17 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isUndefined(db.two);
-
-        assert.instanceOf(db.t1, Writable);
-        assert.isUndefined(db.t2);
-        assert.isUndefined(db.t3);
-        assert.isUndefined(db.tA);
-        assert.instanceOf(db.one.t1, Writable);
-        assert.isUndefined(db.one.t2);
-
-        assert.isUndefined(db.v1);
-        assert.isUndefined(db.v2);
-        assert.isUndefined(db.mv1);
-        assert.isUndefined(db.mv2);
-        assert.isUndefined(db.one.v1);
-        assert.isUndefined(db.one.v2);
-
-        assert.isFunction(db.f1, Executable);
-        assert.isFunction(db.f2, Executable);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+        assert(db);
+        assert(!!db.t1 && !db.t2 && !db.tA);
+        assert(!db.v1 && !db.v2);
+        assert(!db.mv1 && !db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !!db.one.t1 && !db.one.t2 && !db.one.v1 && !db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!db.two);
+        assert.equal(db.tables.length, 2);
+        assert.equal(db.views.length, 0);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -500,30 +350,17 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.isOk(db);
-        assert.isOk(db.one);
-        assert.isUndefined(db.two);
-
-        assert.instanceOf(db.t1, Writable);
-        assert.isUndefined(db.t2);
-        assert.isUndefined(db.t3);
-        assert.isUndefined(db.tA);
-        assert.isUndefined(db.one.t1);
-        assert.isUndefined(db.one.t2);
-
-        assert.isUndefined(db.v1);
-        assert.isUndefined(db.v2);
-        assert.isUndefined(db.mv1);
-        assert.isUndefined(db.mv2);
-        assert.isUndefined(db.one.v1);
-        assert.isUndefined(db.one.v2);
-
-        assert.isUndefined(db.f1);
-        assert.isUndefined(db.f2);
-        assert.isFunction(db.one.f1, Executable);
-        assert.isFunction(db.one.f2, Executable);
-
-        assert.isFunction(db.schema, Executable);
+        assert(db);
+        assert(!!db.t1 && !db.t2 && !db.tA);
+        assert(!db.v1 && !db.v2);
+        assert(!db.mv1 && !db.mv2);
+        assert(!!db.f1 && !!db.f2);
+        assert(!!db.one && !db.one.t1 && !db.one.t2 && !db.one.v1 && !db.one.v2 && !!db.one.f1 && !!db.one.f2);
+        assert(!db.two);
+        assert.equal(db.tables.length, 1);
+        assert.equal(db.views.length, 0);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -539,8 +376,8 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.lengthOf(db.objects.filter(o => o instanceof Executable), 1);
-        assert.lengthOf(db.objects.filter(o => o instanceof Executable && o.sql instanceof pgp.QueryFile), 1);
+        assert.lengthOf(db.functions, 1);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -554,8 +391,8 @@ describe('connecting', function () {
       }, loader);
 
       return massive(connectionString, testLoader).then(db => {
-        assert.lengthOf(db.objects.filter(o => o instanceof Executable), 5);
-        assert.lengthOf(db.objects.filter(o => o instanceof Executable && o.sql instanceof pgp.QueryFile), 1);
+        assert.lengthOf(db.functions, 5);
+        assert.lengthOf(db.functions.filter(f => f.sql instanceof pgp.QueryFile), 1);
 
         return db.instance.$pool.end();
       });
@@ -593,12 +430,11 @@ describe('connecting', function () {
       });
     });
 
-    it('applies exceptions', function () {
+    it('overlaps whitelists and blacklists', function () {
       const testLoader = _.defaults({
         scripts: `${__dirname}/helpers/scripts/loader`,
-        allowedSchemas: 'one',
         functionBlacklist: 'one.%1',
-        exceptions: 'one.f2',
+        functionWhitelist: 'one.%',
         noWarnings: true
       }, loader);
 

@@ -15,11 +15,6 @@ describe('initialization', function () {
     assert.isFunction(db.get_number);
   });
 
-  it('recognizes variadic functions', function () {
-    const fn = db.objects.find(f => f.name === 'single_variadic');
-    assert.isTrue(fn.isVariadic);
-  });
-
   it('handles casing and schema', function* () {
     let res;
 
